@@ -75,6 +75,7 @@ def ImportMimicData():
         columns = ",".join(th.heads.keys())
         placeholders = ",".join(["?"] * len(th.heads))
 
+        # INSERT OR IGNORE works only for UNIQE(column, column2, ..., columnM)
         cur.executemany(
             f"INSERT INTO {th.title} ({columns}) VALUES ({placeholders})",
             [row[:len(th.heads)] for row in data[1:]]
