@@ -1,3 +1,11 @@
+# Planning 
+Build this into a desktop app. 
+* you can do an LLM for searching local database - or do requests on a server postgres instance or whatever (simulate with pi)
+swap between LLM session and CUDA image session -- can implement pytorch to do some of the image processing OR
+
+* python subprocess.run() to have a CUDA script running in the background -- pass data back and forth instead of 
+doing file I/O. 
+
 # Coding systems
 Notes on medical coding systems. Three sets of codes come up for billing and claims. ICD-10-CM, ICD-10-PCS,
 CPT  
