@@ -1,7 +1,7 @@
 # Planning 
 Build this into a desktop app. 
 
-* Update to work with the ICD codes text files under icd10cm-Code Descriptions-2026. check data directory. 
+* Update to work with the ICD codes text files under icd10cm-Code Descriptions-2026. check data directory. --- find the pcs codes later
 
 * you can do an LLM for searching local database - or do requests on a server postgres instance or whatever (simulate with pi)
 swap between LLM session and CUDA image session -- can implement pytorch to do some of the image processing OR
