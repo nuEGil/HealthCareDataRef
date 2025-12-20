@@ -2,7 +2,11 @@ import os
 import csv 
 import sqlite3
 from dataclasses import dataclass
-'''radd in row numbers later. '''
+'''radd in row numbers later.
+Update to work with the ICD codes text files under 
+icd10cm-Code Descriptions-2026. check data directory. 
+-- theres a text file that notes order too by the way
+ '''
 
 MIMIC_DIR = os.environ["MIMIC_DIR"]
 
