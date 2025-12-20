@@ -1,13 +1,5 @@
 # Planning 
-Build this into a desktop app. 
-
-* Update to work with the ICD codes text files under icd10cm-Code Descriptions-2026. check data directory. --- find the pcs codes later
-
-* you can do an LLM for searching local database - or do requests on a server postgres instance or whatever (simulate with pi)
-swap between LLM session and CUDA image session -- can implement pytorch to do some of the image processing OR
-
-* python subprocess.run() to have a CUDA script running in the background -- pass data back and forth instead of 
-doing file I/O. 
+Core problem: Health care system uses coded short descriptions of visit, diagnosis, treatment. This minimizes the information stored, and makes the text normalized and searchable for large scale data systems. CDC puts out updated codes anually; updating how much detail comes with some codes -- good for tracking. It's a few directories of codes, tables, descriptions, with pdfs, txt, xml files every time there's an update. It's a lot to dig through. So a core tool would be a database search engine to find a list of codes that's relavent -- insurance + billing primarily cares about this to determine whether the visit and procedures are covered, but it has some implications for law enforcement and justice system too. 
 
 # Coding systems
 Notes on medical coding systems. Three sets of codes come up for billing and claims. ICD-10-CM, ICD-10-PCS,
@@ -179,3 +171,24 @@ The LLM parses text, and you can build a lot of other systems around that text p
 
 
 Healthcare and Clinical data companies already are database companies with a financial service attached. It's better if the AI companied handle training the models, and building out tools around the models. -- because they have all the data.. 
+
+
+# other thoughts 
+DEMO ONLY: only use publicly available data - read the terms of use on all data carefully.
+
+Selecting different hosting platforms right. 
+
+Web version - quick retrival of codes and maybe some text gen. or host downloads for a desktop app like Fiji /ImageJ / QuPath. 
+
+Desktop version -> everything in webversion + signal, image, test analytics suite 
+more formated text.
+
+
+---
+* Update to work with the ICD codes text files under icd10cm-Code Descriptions-2026. check data directory. --- find the pcs codes later
+
+* you can do an LLM for searching local database - or do requests on a server postgres instance or whatever (simulate with pi)
+swap between LLM session and CUDA image session -- can implement pytorch to do some of the image processing OR
+
+* python subprocess.run() to have a CUDA script running in the background -- pass data back and forth instead of 
+doing file I/O. 
