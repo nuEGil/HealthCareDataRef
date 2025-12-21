@@ -8,8 +8,27 @@ class LocalSearchService(SearchService):
         self.db_conn = db_conn
 
     def search(self, query: str) -> str:
-        self.cur.execute("SELECT * FROM icd10cm LIMIT 10")
-        for row in self.cur.fetchall():
-            print(row)
+        # print('querry : ', query)
+        sql = """
+        SELECT code, short_desc, long_desc
+        FROM icd10cm
+        WHERE long_desc LIKE ?
+        LIMIT 10
+        """
 
-        return f"<b>Local result</b><br/>Query was: {query}"
+        self.cur.execute(sql, (f"%{query}%",))
+        rows = self.cur.fetchall()
+
+        if not rows:
+            return "<i>No results found</i>"
+
+        html = "<b>Results</b><br/>"
+        for code, short_desc, long_desc in rows:
+            html += (
+                f"<p>"
+                f"<b>{code}</b>: {short_desc}<br/>"
+                f"{long_desc}"
+                f"</p>"
+            )
+
+        return html
