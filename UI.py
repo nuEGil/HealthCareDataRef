@@ -1,4 +1,6 @@
+import os
 import sys 
+import sqlite3
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QTextBrowser, 
     QHBoxLayout, QTextEdit, QPushButton, QLabel, 
@@ -7,13 +9,16 @@ from PyQt6.QtWidgets import (
 
 from services.local_search import LocalSearchService
 
+# global var -- convert intoa db service -- not thread safe
+con = sqlite3.connect(os.environ["SEARCH_DB_PATH"]) # these are not thread safe
+
 class SearchPage(QWidget):
     # sendData = pyqtSignal(dict) # define a signal 
     def __init__(self):
         super().__init__()
 
         # there should be a way to set this with argparse. 
-        self.search_service = LocalSearchService()
+        self.search_service = LocalSearchService(con)
 
         # ---- TOP: formatted display area ----
         self.display = QTextBrowser()
@@ -49,7 +54,7 @@ class SearchPage(QWidget):
         self.display.append(output)
 
 class TabbedApp(QMainWindow):
-    def __init__(self):
+    def __init__(self,):
         super().__init__()
         self.setWindowTitle("Tabbed PyQt6 App")
         self.setGeometry(200, 200, 700, 500)
@@ -73,9 +78,13 @@ class TabbedApp(QMainWindow):
 
         self.setCentralWidget(tabs)
 
+def cleanup():
+    con.close()
+
 def main():
     # can the main app be a collection of classes?
     app = QApplication(sys.argv)
+    app.aboutToQuit.connect(cleanup)
     window = TabbedApp()
     window.show()
     sys.exit(app.exec())
