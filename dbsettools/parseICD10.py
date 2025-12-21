@@ -87,5 +87,5 @@ if __name__ == '__main__':
     ICD10DIR = os.environ["CDC_ICD_10_DIR"]
 
     ord_file = os.path.join(ICD10DIR, "icd10cm-Code Descriptions-2026/icd10cm-order-2026.txt")   
-    buildICDDB(ord_file, "icd_10_codes.db") #only run on build - do something else for updating the database. 
+    buildICDDB(ord_file, "data/icd_10_codes.db") #only run on build - do something else for updating the database. 
     # ParseICDOrder(ord_file)
