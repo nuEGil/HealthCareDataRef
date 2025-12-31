@@ -7,6 +7,10 @@ class LocalSearchService(SearchService):
         self.cur = db_conn.cursor()
         self.db_conn = db_conn
 
+    def preprocess_text(self, query: str) -> str:
+        print()
+
+
     def search(self, query: str) -> str:
         # print('querry : ', query)
         sql = """
