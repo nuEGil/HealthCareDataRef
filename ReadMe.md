@@ -10,9 +10,13 @@ CDC has the ICD codes that update annually.
 https://www.cdc.gov/nchs/icd/icd-10-cm/files.html
 icd10cm-Code Descriptions-2026
 
+Thoughts about the code structure. Thinking about code generation and token usage... databse search 
+with keyword genration might help -- but already the long Descriptions match search terms pretty well.. 
+likely SQL for code look up. Now symptom discussion and chart analysis from the MIMIC data set -- 
+now you're talking about document sumarization, but im pretty sure you cant put PHI into the LLM 
+APIs..... the MIMIC data demo is fin though per the data use policy. 
 
 "" = same as above
-
 __diagnosis codes__
 
 3-7 characters in length 
