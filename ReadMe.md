@@ -48,7 +48,7 @@ Add a start and stop token and thats 38^2 = 1444 vocab size. so instead of a tra
 Split the context, input and output sequences like this
 full context = Notes, Full output = V97.33XD (unlikely code)
 
-C:\Users\gil82\progs\data\MIMIC-IV-Demo\ed
+
 
 | Sample ID | Context                  | Input    | Output |
 |-----------|--------------------------|----------|--------|
