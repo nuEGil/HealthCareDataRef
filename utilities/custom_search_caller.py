@@ -32,9 +32,9 @@ def CustomSearchAPICall():
     query = "site:wikipedia.org medical term for ear infection"
     # query = f"{title} common name symptoms site:medlineplus.gov OR site:wikipedia.org"
     params = {
-        'key':  os.environ['GOOGLE_SEARCH_API'],
-        'cx': os.environ['GOOGLE_SEARCH_ENGINE_ID'],
-        'q': query
+        'key': os.environ['GOOGLE_SEARCH_API'],
+        'cx':  os.environ['GOOGLE_SEARCH_ENGINE_ID'],
+        'q':   query
     }
     # requests.get will do this part for you
     response = requests.get(url, params=params)
@@ -66,13 +66,12 @@ def generate_local_knowledge_base(icd_list):
         
         time.sleep(1) # Be nice to the API
 
-
 def response_explore():
-    with open("data/medline-response_data.json", "r",  encoding = "utf-8") as ff:
+    with open("data/wiki-response_data.json", "r",  encoding = "utf-8") as ff:
         data = json.load(ff)
     
     print(type(data)) 
 
 if __name__ == '__main__':
-    CustomSearchAPICall()
+    # CustomSearchAPICall()
     response_explore()

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Start the server in background
-python services/icd10_dbsearch.py > data/server.log 2>&1 &
+python services/icd10_dbsearch.py > data/logs/server.log 2>&1 &
 
 # Save PID if you want to kill later
 SERVER_PID=$!
