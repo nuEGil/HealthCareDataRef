@@ -1,6 +1,8 @@
 import os
 import sys 
+import json
 import sqlite3
+import requests
 
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QTextBrowser, 
@@ -8,27 +10,12 @@ from PyQt6.QtWidgets import (
     QSizePolicy, QSpinBox, QMainWindow, QTabWidget,  
     )
 
-# service imports 
-from services.local_search import LocalSearchService
-
-# remember the registry tip... implement later. 
-if os.environ['LLMFLAG'] == 1:
-    from services.chatbot import ChatServiceLLM
-    chat_service = ChatServiceLLM()
-else:
-    from services.chatbot import ChatServiceBase
-    chat_service = ChatServiceBase()
-
-# global var -- convert intoa db service -- not thread safe
-con = sqlite3.connect(os.environ["SEARCH_DB_PATH"]) # these are not thread safe
-
 class SearchPage(QWidget):
     # sendData = pyqtSignal(dict) # define a signal 
     def __init__(self):
         super().__init__()
-
+        self.BASE_URL = "http://127.0.0.1:8000"
         # there should be a way to set this with argparse. 
-        self.search_service = LocalSearchService(con)
 
         # ---- TOP: formatted display area ----
         self.display = QTextBrowser()
@@ -60,14 +47,18 @@ class SearchPage(QWidget):
 
     def callSearch(self):
         text = self.KeyNameArea.toPlainText()
-        output = self.search_service.search(query = text)
-        self.display.append(output)
+        endpoint = "/search"
+        payload = {"text": text}  
+
+        response = requests.post(self.BASE_URL + endpoint, json=payload)
+        if response.status_code == 200:
+            html_result = response.json().get("result")              
+            self.display.append(html_result)
 
 class ChatPage(QWidget):
     # sendData = pyqtSignal(dict) # define a signal 
     def __init__(self):
         super().__init__()
-        self.chat_service = chat_service
        
         # ---- TOP: formatted display area ----
         self.display = QTextBrowser()
@@ -99,7 +90,8 @@ class ChatPage(QWidget):
 
     def callChat(self):
         text = self.KeyNameArea.toPlainText()
-        output = self.chat_service.chat(query = text)
+        output = "chat message"
+        # output = self.chat_service.chat(query = text)
         self.display.append(output)
 
 class TabbedApp(QMainWindow):
@@ -131,7 +123,7 @@ class TabbedApp(QMainWindow):
         self.setCentralWidget(tabs)
 
 def cleanup():
-    con.close()
+    pass
 
 def main():
     # can the main app be a collection of classes?

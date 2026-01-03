@@ -1,6 +1,9 @@
 # Planning 
 Core problem: Health care system uses coded short descriptions of visit, diagnosis, treatment. This minimizes the information stored, and makes the text normalized and searchable for large scale data systems. CDC puts out updated codes anually; updating how much detail comes with some codes -- good for tracking. It's a few directories of codes, tables, descriptions, with pdfs, txt, xml files every time there's an update. It's a lot to dig through. So a core tool would be a database search engine to find a list of codes that's relavent -- insurance + billing primarily cares about this to determine whether the visit and procedures are covered, but it has some implications for law enforcement and justice system too. 
 
+Switching to UI front end + FastAPI backends for each service --> simulating scalability. 
+
+
 # Coding systems
 Notes on medical coding systems. Three sets of codes come up for billing and claims. ICD-10-CM, ICD-10-PCS,
 CPT  
