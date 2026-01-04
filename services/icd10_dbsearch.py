@@ -29,14 +29,19 @@ class SearchRequest(BaseModel):
 async def search(req: SearchRequest):
     # given a request of type Search Request, return the bottom result
     keyword = req.text.lower() # make it lower case  
-    sql = """
-        SELECT code, short_desc, long_desc
-        FROM icd10cm
-        WHERE long_desc LIKE ?
-        LIMIT 10
-        """
+    keywords = keyword.split(' ') # split by space. we can clean other characters later
 
-    cur.execute(sql, (f"%{keyword}%",))
+    likes = " OR ".join(["lower(long_desc) LIKE ?"] * len(keywords))
+
+    sql = f"""
+    SELECT code, short_desc, long_desc
+    FROM icd10cm
+    WHERE {likes}
+    LIMIT 10
+    """
+
+    params = [f"%{k}%" for k in keywords]
+    cur.execute(sql, params)
     rows = cur.fetchall()
 
     if not rows:
