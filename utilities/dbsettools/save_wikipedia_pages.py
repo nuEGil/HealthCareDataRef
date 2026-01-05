@@ -93,10 +93,6 @@ def mainLoop():
             break
 
     con.close()
-    
-    
-
-
 
 if __name__ == '__main__':
     mainLoop()
