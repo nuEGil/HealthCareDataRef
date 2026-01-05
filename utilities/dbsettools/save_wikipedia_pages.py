@@ -45,6 +45,7 @@ class GoogleSearchTool():
             return output # and thats the page name
         else: 
             return 0
+
 class WikipediaRestAPITool():
     def __init__(self):        
         self.headers = {
@@ -94,5 +95,27 @@ def mainLoop():
 
     con.close()
 
+#lazy verion of getting speicific text items. 
+def querySpecificItems():
+    file_ = os.path.join(os.environ["SEARCH_DB_PATH"], "specific.txt")
+    with open(file_, "r") as ff:
+        terms = ff.readlines()
+    terms = [t.strip() for t in terms]
+    print(terms)
+
+    google = GoogleSearchTool()
+    wiki = WikipediaRestAPITool()
+
+    for i, row in enumerate(terms):
+        print(row[0])
+        top_page = google.call(query=row, tag=i)
+        
+        if not top_page==0:
+            wiki.call(page = top_page, tag = i)        
+        
+        time.sleep(1)
+
+
 if __name__ == '__main__':
-    mainLoop()
+    # mainLoop()
+    querySpecificItems()
