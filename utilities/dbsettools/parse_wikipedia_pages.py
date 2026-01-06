@@ -29,10 +29,29 @@ LogicB - set list of terms to google search to wiki pages
 but you still need to keep the same format... gonna need a data class. 
 
 
-ranking # term_frequency = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))  # count desc, token asc)
+
 for tfidf batch it  - might have a wikipedia results dir that's too big. 
 that's interesting. the batching part 
+
+think about adding more keywords with the genai model - 20 calls per day. 
+
 '''
+HARD_STOPWORDS = {
+    "the","of","and","to","in","a","an","is","are","was","were",
+    "for","on","with","as","by","at","from","that","this","these","those",
+    "it","its","be","or","not","but","if","then","than","so",
+    "can","may","might","should","would","could",
+    "has","have","had","having",
+    "such","other","same","both","each","per", "children"
+}
+
+def is_valid_token(t):
+    return (
+        t not in HARD_STOPWORDS
+        and len(t) >= 3
+        and not t.isdigit()
+    )
+
 @dataclass
 class entry():
     title: str = field(default_factory=str)
@@ -48,7 +67,12 @@ class entry():
         if len(self.term_frequencies) == 0:
             pooled_text = self.symptoms + " " + self.description
             clean_text = re.sub(r'[^0-9a-z]+', ' ', pooled_text.lower())
-            term_counts = Counter(clean_text.split())
+            tokens = [
+                        t for t in clean_text.split()
+                        if is_valid_token(t)
+                    ]
+
+            term_counts = Counter(tokens)
             denom = sum(term_counts.values())
             for k,v in term_counts.items():
                 self.term_frequencies[k] = v/denom
@@ -62,17 +86,16 @@ class TFIDF_computer():
     def compute_TFIDF(self): 
         N = len(self.entries)
         for aentry in self.entries:
-            for term, tf in aentry.term_frequencies.items():
+            for term, tf_ in aentry.term_frequencies.items():
                 # print('term :', term)
                 df = self.doc_frequencies[term]
                 idf = math.log((1 + N) / (1 + df)) + 1
-                aentry.tfidf[term] = math.log10(tf) + idf
+                aentry.tfidf[term] = tf_ * idf 
             # after you get the  tfidf sort them
             top = sorted(aentry.tfidf.items(), key=lambda kv: (-kv[1], kv[0]))[0:10]
-            print(f"title:{aentry.title}, kw:{top}")
+            # print(f"title:{aentry.title}, kw:{top}")
             aentry.keywords=",".join([t[0] for t in top])
-            aentry.keywords+=f",{aentry.title}"
-            # aentry.sortTFIDF()
+            aentry.keywords+=f",{aentry.title}" # add the title into the key word search
                 
 def getEntry(file_):
     page_entrty = entry() # make an entry
@@ -121,7 +144,6 @@ def getEntry(file_):
 
     return page_entrty
 
-
 if __name__ == '__main__':
     lung_dat_path = os.path.join(os.environ["SEARCH_DB_PATH"], "lungdat/wikipedia_results/")
     # lung_dat_path = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/wikipedia_results/")
@@ -151,4 +173,5 @@ if __name__ == '__main__':
     
     coco = TFIDF_computer(entries=all_entries, doc_frequencies=doc_term_counter)
     coco.compute_TFIDF()
-    print(coco.entries[0].title, ": ",coco.entries[0].keywords)
+    for j in range(len(coco.entries)):
+        print(coco.entries[j].title, ": ",coco.entries[j].keywords)
