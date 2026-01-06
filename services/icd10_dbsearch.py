@@ -18,7 +18,7 @@ curl -X POST http://127.0.0.1:8000/search \
 app = FastAPI()
 
 # Connect to the sql database 
-con = sqlite3.connect(os.environ["SEARCH_DB_PATH"]) # these are not thread safe
+con = sqlite3.connect(os.path.join(os.environ["SEARCH_DB_PATH"]), "icd_10_codes.db") # these are not thread safe
 cur = con.cursor() # createa cursor object
 
 class SearchRequest(BaseModel):
