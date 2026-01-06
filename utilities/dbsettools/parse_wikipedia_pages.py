@@ -74,6 +74,15 @@ class entry():
                 self.term_frequencies[k] = v/denom
                 self.tfidf[k] = 0.0
 
+    def to_record(self):
+        # make sure you runt he tfidf computer first. 
+        return {
+            "title": self.title,
+            "description": self.description,
+            "symptoms": self.symptoms,
+            "keywords": self.keywords
+        }
+
 @dataclass
 class TFIDF_computer():
     entries:list 
