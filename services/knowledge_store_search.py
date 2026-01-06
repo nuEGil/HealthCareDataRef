@@ -13,7 +13,7 @@ later on.
 try out the service 
 curl -X POST http://127.0.0.1:8001/search \
     -H "Content-Type: application/json" \
-    -d '{"text": "opacity"}'
+    -d '{"text": "opacity lung"}'
 
 '''
 app = FastAPI()
@@ -32,7 +32,7 @@ async def search(req: SearchRequest):
     qwords = req.text.lower() # make it lower case  
     qwords = qwords.split(' ') # split by space. we can clean other characters later
 
-    likes = " OR ".join(["lower(keywords) LIKE ?"] * len(qwords))
+    likes = " AND ".join(["lower(keywords) LIKE ?"] * len(qwords))
 
     sql = f"""
     SELECT wikititle, description, symptoms, keywords
@@ -63,6 +63,9 @@ async def search(req: SearchRequest):
                 
                 <p><b>Keyword tags:</b><br/>
                 {kwords}
+                </p>
+                <p><i>Disclaimer:</i><br/>
+                database built with google search api + wikipedia rest api. visit the wikipedia page in the title for the full information. 
                 </p>
             </div>
             """

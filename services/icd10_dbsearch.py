@@ -18,7 +18,7 @@ curl -X POST http://127.0.0.1:8000/search \
 app = FastAPI()
 
 # Connect to the sql database 
-con = sqlite3.connect(os.path.join(os.environ["SEARCH_DB_PATH"]), "icd_10_codes.db") # these are not thread safe
+con = sqlite3.connect(os.path.join(os.environ["SEARCH_DB_PATH"], "icd_10_codes.db")) # these are not thread safe
 cur = con.cursor() # createa cursor object
 
 class SearchRequest(BaseModel):
@@ -31,13 +31,12 @@ async def search(req: SearchRequest):
     keyword = req.text.lower() # make it lower case  
     keywords = keyword.split(' ') # split by space. we can clean other characters later
 
-    likes = " OR ".join(["lower(long_desc) LIKE ?"] * len(keywords))
+    likes = " AND ".join(["lower(long_desc) LIKE ?"] * len(keywords))
 
     sql = f"""
     SELECT code, short_desc, long_desc
     FROM icd10cm
     WHERE {likes}
-    LIMIT 10
     """
 
     params = [f"%{k}%" for k in keywords]

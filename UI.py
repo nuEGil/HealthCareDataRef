@@ -55,10 +55,11 @@ class SearchPage(QWidget):
             html_result = response.json().get("result")              
             self.display.append(html_result)
 
-class ChatPage(QWidget):
+class KnowledgePage(QWidget):
     # sendData = pyqtSignal(dict) # define a signal 
     def __init__(self):
         super().__init__()
+        self.BASE_URL = "http://127.0.0.1:8001"
        
         # ---- TOP: formatted display area ----
         self.display = QTextBrowser()
@@ -75,7 +76,7 @@ class ChatPage(QWidget):
         self.KeyNameArea.setFixedHeight(60)
 
         self.set_keynames = QPushButton("Send")
-        self.set_keynames.clicked.connect(self.callChat)
+        self.set_keynames.clicked.connect(self.callknowledge)
 
         bottom_bar = QHBoxLayout()
         bottom_bar.addWidget(self.KeyNameArea)
@@ -88,11 +89,15 @@ class ChatPage(QWidget):
 
         self.setLayout(main_layout)
 
-    def callChat(self):
+    def callknowledge(self):
         text = self.KeyNameArea.toPlainText()
-        output = "chat message"
-        # output = self.chat_service.chat(query = text)
-        self.display.append(output)
+        endpoint = "/search"
+        payload = {"text": text}  
+
+        response = requests.post(self.BASE_URL + endpoint, json=payload)
+        if response.status_code == 200:
+            html_result = response.json().get("result")              
+            self.display.append(html_result)
 
 class TabbedApp(QMainWindow):
     def __init__(self,):
@@ -107,8 +112,8 @@ class TabbedApp(QMainWindow):
         self.page1 = SearchPage() 
         tabs.addTab(self.page1, "Search Page")
         
-        self.page2 = ChatPage() 
-        tabs.addTab(self.page2, "Chat Page")
+        self.page2 = KnowledgePage() 
+        tabs.addTab(self.page2, "Knowledge Page")
         
         # # connect to sent signals 
         # self.page1.sendData.connect(self.page2.receiveData)
