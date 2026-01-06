@@ -25,16 +25,9 @@ LogicB - set list of terms to google search to wiki pages
 1. get keywords especially symptoms from any wikipedia pages
 2. search icd10 database for a match given the key words
 
-
-but you still need to keep the same format... gonna need a data class. 
-
-
-
-for tfidf batch it  - might have a wikipedia results dir that's too big. 
-that's interesting. the batching part 
-
-think about adding more keywords with the genai model - 20 calls per day. 
-
+Using TFIDF for the keyword generation without the LLM
+May make a version of this with the gemini caller commands to add a second set of keywords
+rememebr gemini gen ai only allows 20 calls per day. so be careful here. 
 '''
 HARD_STOPWORDS = {
     "the","of","and","to","in","a","an","is","are","was","were",
