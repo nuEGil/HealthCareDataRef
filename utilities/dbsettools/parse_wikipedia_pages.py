@@ -2,7 +2,7 @@ import os
 import re
 import glob
 import json
-import copy
+import sqlite3
 from collections import Counter
 from dataclasses import dataclass, field, asdict
 import math 
@@ -75,9 +75,9 @@ class entry():
                 self.tfidf[k] = 0.0
 
     def to_record(self):
-        # make sure you runt he tfidf computer first. 
+        # make sure you run  the tfidf computer first. 
         return {
-            "title": self.title,
+            "title": self.title, # wikipedia page title. 
             "description": self.description,
             "symptoms": self.symptoms,
             "keywords": self.keywords
@@ -149,12 +149,16 @@ def getEntry(file_):
 
     return page_entrty
 
-if __name__ == '__main__':
+def GrabAllEntriesAndTFIDF():
     lung_dat_path = os.path.join(os.environ["SEARCH_DB_PATH"], "lungdat/wikipedia_results/")
-    # lung_dat_path = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/wikipedia_results/")
+    lung_dat_path2 = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/wikipedia_results/")
     
     pages = glob.glob(os.path.join(lung_dat_path, "*.html"))
-    
+    # shouldnt extend pages. should link with icd database so that we can do base table then a second table with icd id and these entries. 
+    # but demo mode. 
+    pages2 = glob.glob(os.path.join(lung_dat_path2, "*.html"))
+    pages.extend(pages2)
+
     all_entries = []
     doc_term_counter = Counter()
     # need one loop to get the entries and get the 
@@ -180,3 +184,44 @@ if __name__ == '__main__':
     coco.compute_TFIDF()
     for j in range(len(coco.entries)):
         print(coco.entries[j].title, ": ",coco.entries[j].keywords)
+
+    return coco
+
+def buildKnowledgeStore(data_):
+    # using basically the same commands from the parseICD10 script
+    outname = os.path.join(os.environ["SEARCH_DB_PATH"], "knowledge_store.db")
+    
+    con = sqlite3.connect(outname) # can store the icd10 CM + PCS together later idk
+    cur = con.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS knowledge_store (
+    id INTEGER PRIMARY KEY,
+    wikititle TEXT,
+    description TEXT,
+    symptoms TEXT,
+    keywords TEXT);
+    """)
+
+    for ie, ent in enumerate(data_.entries):
+        command = """INSERT INTO knowledge_store (id,wikititle,description,symptoms,keywords) 
+        VALUES (?,?,?,?,?)"""
+        # 1 indexed table
+        cur.execute(command, (ie,
+                              ent.title,
+                              ent.description,
+                              ent.symptoms,
+                              ent.keywords,))
+        
+    con.commit()# commit after insert. 
+
+    # print some stuff so i know it worked
+    cur.execute("SELECT * FROM knowledge_store LIMIT 10")
+    for row in cur.fetchall():
+        print(row)
+
+    con.close() # close .db file
+    return 0 # exit code for myself
+
+if __name__ == '__main__':
+    TFIDF_Comp_Data = GrabAllEntriesAndTFIDF()
+    # next step is to put it all into an sql database. 
+    buildKnowledgeStore(TFIDF_Comp_Data) # only run once. 
