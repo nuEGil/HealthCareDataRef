@@ -3,39 +3,44 @@ import re
 import glob
 import json
 import sqlite3
-from collections import Counter, defaultdict
+import argparse
+from collections import Counter
 from dataclasses import dataclass, field, asdict
 import math 
 from bs4 import BeautifulSoup
 
-
-
 '''
 Need to refactor to clean this up. 
+need to implement version numbers if this is going to change
+as the databse builds up over time. --> keywords from tfidf might be different. 
 
-get symptoms
-get description
-
-Paths for this code.
-1. is if we have the search terms we used that were reading DB entries, then we can just read the wikipedia pages directly and add to a new database with symptoms
-2. there's a version for the demo where we read a set list of lung pathologies. we need different logic for that. 
-
-LogicA - icd10 to google search to wiki pages
-1. read google search jsons for the search terms. 
-2. parse the wikipedia pages 
-3. output results to sql database so it has - icd term + symptoms, + wiki page
-
-LogicB - set list of terms to google search to wiki pages
-1. get keywords especially symptoms from any wikipedia pages
-2. search icd10 database for a match given the key words
-
-Using TFIDF for the keyword generation without the LLM -- scores dependant on document window contents. huh... context window again. 
+Using TFIDF for the keyword generation without the LLM.
+scores dependant on document window contents.  huh... context window again. 
 May make a version of this with the gemini caller commands to add a second set of keywords
 rememebr gemini gen ai only allows 20 calls per day. so be careful here. 
 
-
 last step -- save entries to a json or directly to sql db... have to remember to make copeis where needed. 
 '''
+
+def manageArgs():
+    parser = argparse.ArgumentParser(
+        description="Run job starting from an index"
+    )
+    parser.add_argument(
+        "--start",
+        type=int,
+        default=0,
+        help="Starting index (default: 0)"
+    )
+    parser.add_argument(
+        "--n_searches",
+        type=int,
+        default=10,
+        help="number of searches (default: 10)"
+    )
+
+    args = parser.parse_args()
+    return args
 
 HARD_STOPWORDS = {
     "the","of","and","to","in","a","an","is","are","was","were",
@@ -186,13 +191,9 @@ def getIDsFromWiki(n_searches, start):
 
 def GrabAllEntriesAndTFIDF():
     # Get known rows -- add arg parse for this. 
-    pipeline_queries = getIDsFromWiki(n_searches=30, start=0)
-    
-    # # Get google and wiki paths.  
-    # google_paths = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/google_results/")
-    # google_pages = getDataEndID(google_paths, 'json')
-    # print(google_pages.keys())
-
+    args = manageArgs()
+    pipeline_queries = getIDsFromWiki(n_searches=args.n_searches, start=args.start)
+    # get wikipedia page paths
     wiki_paths = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/wikipedia_results/")
     wiki_pages = getDataEndID(wiki_paths)
     print(wiki_pages.keys())
@@ -202,13 +203,7 @@ def GrabAllEntriesAndTFIDF():
     doc_term_counter = Counter()
     # need one loop to get the entries and get the 
     for ii, (wiki_key, wiki_path) in enumerate(wiki_pages.items()):
-        # print('wiki path     ',wiki_path)
-        # google_term = readGoogleSearchJson(google_pages[wiki_key])
         pquery = pipeline_queries[wiki_key]
-        # can do an assert google_term == pquery if you want. 
-
-        # print('check ', google_term, pquery)
-
 
         # read the wikipedia page
         with open(wiki_path, "r", encoding ="utf-8") as f0:
@@ -228,8 +223,6 @@ def GrabAllEntriesAndTFIDF():
         for term in new_entry.term_frequencies:
             doc_term_counter[term]+=1
         all_entries.append(new_entry)
-
-    # print(doc_term_counter)
     
     coco = TFIDF_computer(entries=all_entries, doc_frequencies=doc_term_counter)
     coco.compute_TFIDF()
@@ -276,8 +269,7 @@ def buildKnowledgeStore(data_):
     con.close() # close .db file
     return 0 # exit code 
 
-if __name__ == '__main__':
-   
+if __name__ == '__main__':   
     TFIDF_Comp_Data = GrabAllEntriesAndTFIDF()
     # next step is to put it all into an sql database. 
     buildKnowledgeStore(TFIDF_Comp_Data) # only run once. 
