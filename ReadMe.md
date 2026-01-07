@@ -13,7 +13,7 @@ use this to kill threads on ports you know
 	kill $(sudo lsof -t -i :<PORT>)
 
 do the following upgrades. 
-1. consolidate the search pages. right now the knowledge base searches fine. but we need those key words for the icd look up. 
+1. have google search term in the knowledge base... that term should be the ICD name, so add a function that uses that grabs the ICDCode out of the icd databse.  
 
 independant of the icd codes 
 2. implement image processing tools 
