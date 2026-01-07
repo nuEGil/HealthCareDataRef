@@ -19,7 +19,7 @@ curl -X POST http://127.0.0.1:8001/search \
 app = FastAPI()
 
 # Connect to the sql database 
-con = sqlite3.connect(os.path.join(os.environ["SEARCH_DB_PATH"], "knowledge_store.db")) # these are not thread safe
+con = sqlite3.connect(os.path.join(os.environ["SEARCH_DB_PATH"], "knowledge_store4.db")) # these are not thread safe
 cur = con.cursor() # createa cursor object
 
 class SearchRequest(BaseModel):
@@ -35,7 +35,7 @@ async def search(req: SearchRequest):
     likes = " AND ".join(["lower(keywords) LIKE ?"] * len(qwords))
 
     sql = f"""
-    SELECT wikititle, description, symptoms, keywords
+    SELECT wikititle, description, symptoms, keywords, google_term
     FROM knowledge_store
     WHERE {likes}
     LIMIT 1
@@ -49,7 +49,7 @@ async def search(req: SearchRequest):
         return {"result": "<i>No results found</i>"} 
 
     html = "<b>Results</b><br/>"
-    for wikititle, desc, symptoms, kwords in rows:
+    for wikititle, desc, symptoms, kwords, gterm in rows:
         html += f"""
             <div class="wiki-entry">
                 <h3 class="wiki-title">{wikititle}</h3>
@@ -64,6 +64,12 @@ async def search(req: SearchRequest):
                 <p><b>Keyword tags:</b><br/>
                 {kwords}
                 </p>
+
+                <p><b> ICD term used to search Google:</b><br/>
+                {gterm}
+                </p>
+
+
                 <p><i>Disclaimer:</i><br/>
                 database built with google search api + wikipedia rest api. visit the wikipedia page in the title for the full information. 
                 </p>

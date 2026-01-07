@@ -46,6 +46,7 @@ class SearchPage(QWidget):
         self.setLayout(main_layout)
 
     def callSearch(self):
+        self.display.clear()
         text = self.KeyNameArea.toPlainText()
         endpoint = "/search"
         payload = {"text": text}  
@@ -90,6 +91,7 @@ class KnowledgePage(QWidget):
         self.setLayout(main_layout)
 
     def callknowledge(self):
+        self.display.clear()
         text = self.KeyNameArea.toPlainText()
         endpoint = "/search"
         payload = {"text": text}  

@@ -31,6 +31,20 @@ async def search(req: SearchRequest):
     keyword = req.text.lower() # make it lower case  
     keywords = keyword.split(' ') # split by space. we can clean other characters later
 
+    # core = keywords[0]
+    # optional = keywords[1:]
+
+    # sql = f"""
+    # SELECT code, short_desc, long_desc
+    # FROM icd10cm
+    # WHERE lower(long_desc) LIKE ?
+    # AND (
+    #     {" OR ".join(["lower(long_desc) LIKE ?"] * len(optional))}
+    # )
+    # """
+
+    # params = [f"%{core}%"] + [f"%{k}%" for k in optional]
+    
     likes = " AND ".join(["lower(long_desc) LIKE ?"] * len(keywords))
 
     sql = f"""

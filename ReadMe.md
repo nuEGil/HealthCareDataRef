@@ -7,6 +7,19 @@ but the end to end encryption is important for HIPAA. so its good to learn to do
 
 Also... this is more of a demo repo for how to build out all the main parts of health apps. 
 
+# TODO
+
+use this to kill threads on ports you know 
+	kill $(sudo lsof -t -i :<PORT>)
+
+do the following upgrades. 
+1. consolidate the search pages. right now the knowledge base searches fine. but we need those key words for the icd look up. 
+
+independant of the icd codes 
+2. implement image processing tools 
+3. implement signals processing tools. 
+
+
 # Coding systems
 Notes on medical coding systems. Three sets of codes come up for billing and claims. ICD-10-CM, ICD-10-PCS,
 CPT  

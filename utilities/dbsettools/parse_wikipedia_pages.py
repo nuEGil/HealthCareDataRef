@@ -3,7 +3,7 @@ import re
 import glob
 import json
 import sqlite3
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field, asdict
 import math 
 
@@ -50,6 +50,7 @@ def is_valid_token(t):
 
 @dataclass
 class entry():
+    google_term:str = field(default_factory=str)
     title: str = field(default_factory=str)
     description: str = field(default_factory=str)
     symptoms: str = field(default_factory=str)
@@ -149,25 +150,43 @@ def getEntry(file_):
 
     return page_entrty
 
-def GrabAllEntriesAndTFIDF():
-    lung_dat_path = os.path.join(os.environ["SEARCH_DB_PATH"], "lungdat/wikipedia_results/")
-    lung_dat_path2 = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/wikipedia_results/")
-    
-    pages = glob.glob(os.path.join(lung_dat_path, "*.html"))
-    # shouldnt extend pages. should link with icd database so that we can do base table then a second table with icd id and these entries. 
-    # but demo mode. 
-    pages2 = glob.glob(os.path.join(lung_dat_path2, "*.html"))
-    pages.extend(pages2)
+def getDataEndID(path_, suffix = "html"):
+    pages = glob.glob(os.path.join(path_, f"*.{suffix}"))
+    return {p.split('-')[-1].split('.')[0]:p  for p in pages}
 
+def readGoogleSearchJson(path_):
+    with open(path_, "r", encoding ="utf-8") as ff:
+        data= json.load(ff)
+    gterm = data['queries']['request'][0]['searchTerms'][len("site:wikipedia.org")::]
+    return gterm
+
+
+def GrabAllEntriesAndTFIDF():
+    # i need a function to get all the     
+    google_paths = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/google_results/")
+    google_pages = getDataEndID(google_paths, 'json')
+    print(google_pages.keys())
+
+    wiki_paths = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/wikipedia_results/")
+    wiki_pages = getDataEndID(wiki_paths)
+    print(wiki_pages.keys())
+
+    # wikipedia is gonna have less pages, because not all the search results yield a wikipedia page. 
     all_entries = []
     doc_term_counter = Counter()
     # need one loop to get the entries and get the 
-    for ii, page in enumerate(pages):
+    for ii, (wiki_key, wiki_path) in enumerate(wiki_pages.items()):
+        print('wiki path     ',wiki_path)
+        google_term = readGoogleSearchJson(google_pages[wiki_key])
+        print(google_term)
+        # read the wikipedia page
+        with open(wiki_path, "r", encoding ="utf-8") as f0:
+            wiki_page = f0.read()
         print("page number: ", ii)
-        with open(page, "r") as f:
-            file_ = f.read()
     
-        new_entry = getEntry(file_)
+    
+        new_entry = getEntry(wiki_page)
+        new_entry.google_term = ""+google_term
         print(new_entry.title)
         print(f"len desc :{len(new_entry.description)}  len symptoms: {len(new_entry.symptoms)}")
         print(new_entry)
@@ -186,15 +205,18 @@ def GrabAllEntriesAndTFIDF():
         print(coco.entries[j].title, ": ",coco.entries[j].keywords)
 
     return coco
+    # return 0
+
 
 def buildKnowledgeStore(data_):
     # using basically the same commands from the parseICD10 script
-    outname = os.path.join(os.environ["SEARCH_DB_PATH"], "knowledge_store.db")
+    outname = os.path.join(os.environ["SEARCH_DB_PATH"], "knowledge_store4.db")
     
     con = sqlite3.connect(outname) # can store the icd10 CM + PCS together later idk
     cur = con.cursor()
     cur.execute("""CREATE TABLE IF NOT EXISTS knowledge_store (
     id INTEGER PRIMARY KEY,
+    google_term TEXT,
     wikititle TEXT,
     description TEXT,
     symptoms TEXT,
@@ -202,10 +224,11 @@ def buildKnowledgeStore(data_):
     """)
 
     for ie, ent in enumerate(data_.entries):
-        command = """INSERT INTO knowledge_store (id,wikititle,description,symptoms,keywords) 
-        VALUES (?,?,?,?,?)"""
+        command = """INSERT INTO knowledge_store (id,google_term,wikititle,description,symptoms,keywords) 
+        VALUES (?,?,?,?,?,?)"""
         # 1 indexed table
         cur.execute(command, (ie,
+                              ent.google_term,
                               ent.title,
                               ent.description,
                               ent.symptoms,
@@ -224,4 +247,4 @@ def buildKnowledgeStore(data_):
 if __name__ == '__main__':
     TFIDF_Comp_Data = GrabAllEntriesAndTFIDF()
     # next step is to put it all into an sql database. 
-    buildKnowledgeStore(TFIDF_Comp_Data) # only run once. 
+    # buildKnowledgeStore(TFIDF_Comp_Data) # only run once. 
