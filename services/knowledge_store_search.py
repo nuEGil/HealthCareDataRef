@@ -35,7 +35,7 @@ async def search(req: SearchRequest):
     likes = " AND ".join(["lower(keywords) LIKE ?"] * len(qwords))
 
     sql = f"""
-    SELECT wikititle, description, symptoms, keywords, google_term
+    SELECT wikititle, description, symptoms, keywords, google_term, icdcode
     FROM knowledge_store
     WHERE {likes}
     LIMIT 1
@@ -49,7 +49,7 @@ async def search(req: SearchRequest):
         return {"result": "<i>No results found</i>"} 
 
     html = "<b>Results</b><br/>"
-    for wikititle, desc, symptoms, kwords, gterm in rows:
+    for wikititle, desc, symptoms, kwords, gterm, icdcode in rows:
         html += f"""
             <div class="wiki-entry">
                 <h3 class="wiki-title">{wikititle}</h3>
@@ -61,12 +61,22 @@ async def search(req: SearchRequest):
                     {symptoms}
                 </p>
                 
+                <p><b>ICD Code Prefix:</b><br/>
+                    {icdcode}
+                    
+                </p>
+
+                <p><i>Enter {icdcode} on search page for full code </i><br/>
+                    
+                    
+                </p>
+                
                 <p><b>Keyword tags:</b><br/>
-                {kwords}
+                    {kwords}
                 </p>
 
                 <p><b> ICD term used to search Google:</b><br/>
-                {gterm}
+                    {gterm}
                 </p>
 
 
