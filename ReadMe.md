@@ -46,8 +46,6 @@ A way to think about this --> the entirety of wikipedia is more bytes than the n
 
 probably a good idea to make a better run_app.sh and script for killing any threads you missed. 
 
-1. make sure to save the ICDcode + the google search term when running the save_wikipedia_pages.py, so you can make the ICD code part of the database yielded in parse_wikipedia_pages.py
-
 independant of the icd codes 
 2. implement image processing tools -- model server + at least 1 image feature computer in C. 
 3. implement signals processing tools. 
