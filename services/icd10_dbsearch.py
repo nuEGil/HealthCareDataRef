@@ -31,36 +31,49 @@ async def search(req: SearchRequest):
     keyword = req.text.lower() # make it lower case  
     keywords = keyword.split(' ') # split by space. we can clean other characters later
 
-    # core = keywords[0]
-    # optional = keywords[1:]
+    if keywords[0] == "code":
+        # only use the 1st ICD code following the keyword to search
+        sql = f"""
+            SELECT code, short_desc, long_desc
+            FROM icd10cm
+            WHERE code LIKE ?
+            """
 
-    # sql = f"""
-    # SELECT code, short_desc, long_desc
-    # FROM icd10cm
-    # WHERE lower(long_desc) LIKE ?
-    # AND (
-    #     {" OR ".join(["lower(long_desc) LIKE ?"] * len(optional))}
-    # )
-    # """
+        cur.execute(sql, (f"{keywords[1].upper()}%",))
+        rows = cur.fetchall()
 
-    # params = [f"%{core}%"] + [f"%{k}%" for k in optional]
-    
-    likes = " AND ".join(["lower(long_desc) LIKE ?"] * len(keywords))
+    elif keywords[0] == "terms":
+        # also the base case
+        likes = " OR ".join(["LOWER(long_desc) LIKE ?"] * len(keywords[1::]))
+        sql = f"""
+        SELECT code, short_desc, long_desc
+        FROM icd10cm
+        WHERE {likes}
+        """
 
-    sql = f"""
-    SELECT code, short_desc, long_desc
-    FROM icd10cm
-    WHERE {likes}
-    """
+        params = [f"%{t}%" for t in keywords[1::]]
+        cur.execute(sql, params)
+        rows = cur.fetchall()
 
-    params = [f"%{k}%" for k in keywords]
-    cur.execute(sql, params)
-    rows = cur.fetchall()
+        results = []
+        # this matches similarity. need to add a loop to drop results. 
+        for r in rows:
+            score = len(set(keywords[1::]) & set(r[2].lower().split()))
+            if score > 0:
+                results.append((score, r))
+            
+        results.sort(reverse=True, key=lambda x: x[0])
+        rows = [r[1] for r in results]
+        rows = rows[0:20]  # need to add in a slider or something to change num results 
 
-    if not rows:
+    else:
+        rows =[]
+
+
+    if len(rows)<1:
         return {"result": "<i>No results found</i>"} 
 
-    html = "<b>Results</b><br/>"
+    html = "<b>Top (20) Results</b><br/>"
     for code, short_desc, long_desc in rows:
         html += (
             f"<p>"

@@ -10,6 +10,15 @@ from PyQt6.QtWidgets import (
     QSizePolicy, QSpinBox, QMainWindow, QTabWidget,  
     )
 
+'''Add a togle for the different cases on search page
+search page should have 
+1. code 
+2. terms
+
+this way you can post - 
+code <ICD code prefix>
+terms <user term list>'''
+
 class SearchPage(QWidget):
     # sendData = pyqtSignal(dict) # define a signal 
     def __init__(self):
