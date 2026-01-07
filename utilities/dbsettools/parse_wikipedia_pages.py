@@ -6,9 +6,13 @@ import sqlite3
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field, asdict
 import math 
-
 from bs4 import BeautifulSoup
+
+
+
 '''
+Need to refactor to clean this up. 
+
 get symptoms
 get description
 
@@ -32,6 +36,7 @@ rememebr gemini gen ai only allows 20 calls per day. so be careful here.
 
 last step -- save entries to a json or directly to sql db... have to remember to make copeis where needed. 
 '''
+
 HARD_STOPWORDS = {
     "the","of","and","to","in","a","an","is","are","was","were",
     "for","on","with","as","by","at","from","that","this","these","those",
@@ -51,6 +56,7 @@ def is_valid_token(t):
 @dataclass
 class entry():
     google_term:str = field(default_factory=str)
+    icdcode: str = field(default_factory=str)
     title: str = field(default_factory=str)
     description: str = field(default_factory=str)
     symptoms: str = field(default_factory=str)
@@ -160,25 +166,50 @@ def readGoogleSearchJson(path_):
     gterm = data['queries']['request'][0]['searchTerms'][len("site:wikipedia.org")::]
     return gterm
 
+def getIDsFromWiki(n_searches, start):
+    dbpath = os.path.join(os.environ["SEARCH_DB_PATH"], "icd_10_codes.db")
+    con = sqlite3.connect(dbpath) # these are not thread safe
+    cur = con.cursor() # createa cursor object    
+    # same query we used to run the google + wikipedia page search pipeline. 
+    sql_ = """
+            SELECT short_desc, code
+            FROM icd10cm
+            WHERE LENGTH(CAST(code AS TEXT)) = 3
+            ORDER BY code
+            LIMIT ? OFFSET ?;
+            """
+    cur.execute(sql_, (n_searches, start))
+    rows = cur.fetchall()
+    # same string formating as when we saved the wikipedia pages
+    rows_ = {"{:05d}".format(ii):(r[0],r[1]) for ii, r in enumerate(rows)}
+    return rows_
 
 def GrabAllEntriesAndTFIDF():
-    # i need a function to get all the     
-    google_paths = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/google_results/")
-    google_pages = getDataEndID(google_paths, 'json')
-    print(google_pages.keys())
+    # Get known rows -- add arg parse for this. 
+    pipeline_queries = getIDsFromWiki(n_searches=30, start=0)
+    
+    # # Get google and wiki paths.  
+    # google_paths = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/google_results/")
+    # google_pages = getDataEndID(google_paths, 'json')
+    # print(google_pages.keys())
 
     wiki_paths = os.path.join(os.environ["SEARCH_DB_PATH"], "base_crawl/wikipedia_results/")
     wiki_pages = getDataEndID(wiki_paths)
     print(wiki_pages.keys())
 
-    # wikipedia is gonna have less pages, because not all the search results yield a wikipedia page. 
+    # wiki_paths has less pages -> not all the search results yield a wikipedia page. 
     all_entries = []
     doc_term_counter = Counter()
     # need one loop to get the entries and get the 
     for ii, (wiki_key, wiki_path) in enumerate(wiki_pages.items()):
-        print('wiki path     ',wiki_path)
-        google_term = readGoogleSearchJson(google_pages[wiki_key])
-        print(google_term)
+        # print('wiki path     ',wiki_path)
+        # google_term = readGoogleSearchJson(google_pages[wiki_key])
+        pquery = pipeline_queries[wiki_key]
+        # can do an assert google_term == pquery if you want. 
+
+        # print('check ', google_term, pquery)
+
+
         # read the wikipedia page
         with open(wiki_path, "r", encoding ="utf-8") as f0:
             wiki_page = f0.read()
@@ -186,7 +217,8 @@ def GrabAllEntriesAndTFIDF():
     
     
         new_entry = getEntry(wiki_page)
-        new_entry.google_term = ""+google_term
+        new_entry.google_term = ""+pquery[0]
+        new_entry.icdcode = ""+pquery[1]
         print(new_entry.title)
         print(f"len desc :{len(new_entry.description)}  len symptoms: {len(new_entry.symptoms)}")
         print(new_entry)
@@ -205,8 +237,6 @@ def GrabAllEntriesAndTFIDF():
         print(coco.entries[j].title, ": ",coco.entries[j].keywords)
 
     return coco
-    # return 0
-
 
 def buildKnowledgeStore(data_):
     # using basically the same commands from the parseICD10 script
@@ -217,6 +247,7 @@ def buildKnowledgeStore(data_):
     cur.execute("""CREATE TABLE IF NOT EXISTS knowledge_store (
     id INTEGER PRIMARY KEY,
     google_term TEXT,
+    icdcode TEXT,
     wikititle TEXT,
     description TEXT,
     symptoms TEXT,
@@ -224,11 +255,12 @@ def buildKnowledgeStore(data_):
     """)
 
     for ie, ent in enumerate(data_.entries):
-        command = """INSERT INTO knowledge_store (id,google_term,wikititle,description,symptoms,keywords) 
-        VALUES (?,?,?,?,?,?)"""
+        command = """INSERT INTO knowledge_store (id,google_term,icdcode,wikititle,description,symptoms,keywords) 
+        VALUES (?,?,?,?,?,?,?)"""
         # 1 indexed table
         cur.execute(command, (ie,
                               ent.google_term,
+                              ent.icdcode,
                               ent.title,
                               ent.description,
                               ent.symptoms,
@@ -242,9 +274,10 @@ def buildKnowledgeStore(data_):
         print(row)
 
     con.close() # close .db file
-    return 0 # exit code for myself
+    return 0 # exit code 
 
 if __name__ == '__main__':
+   
     TFIDF_Comp_Data = GrabAllEntriesAndTFIDF()
     # next step is to put it all into an sql database. 
-    # buildKnowledgeStore(TFIDF_Comp_Data) # only run once. 
+    buildKnowledgeStore(TFIDF_Comp_Data) # only run once. 
