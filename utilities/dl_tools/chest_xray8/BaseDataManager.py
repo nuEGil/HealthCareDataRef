@@ -188,8 +188,38 @@ def startSQLLiteDB():
     con.commit()# commit after insert. 
     con.close() # close .db file
 
+def getSubsetData():
+    # staring up the db
+    dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
+    db_name = os.path.join(dir_, 'consolidated_sheets.db')
+  
+    con = sqlite3.connect(db_name) # can store the icd10 CM + PCS together later idk
+    cur = con.cursor()
+
+    cur.execute(
+        """
+        SELECT
+            p.path,
+            b.finding_label,
+            b.x, b.y, b.w, b.h,
+            d.original_w, d.original_h,
+            d.original_xres, d.original_yres
+        FROM BBoxList2017 b
+        JOIN paths p USING (image_ind)
+        JOIN dataEntry2017 d USING (image_ind)
+        WHERE b.finding_label LIKE ?
+        """,
+        ("%Effusion%",)
+    )
+
+    rows = cur.fetchall()
+    for r in rows:
+        print(r)
+
+    con.close() # close .db file
+
 if __name__ == '__main__':
     # start database - only run once. 
-    startSQLLiteDB()
-     
+    # startSQLLiteDB()
+    getSubsetData()
      
