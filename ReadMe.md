@@ -41,14 +41,22 @@ A way to think about this --> the entirety of wikipedia is more bytes than the n
 2. knowledge_store_search.py: Search using any keyword. Searches the Keywords gnerated with TFIDF during the wikipedia page parsing. 
 
 # TODO
-0. use this to kill threads on ports you know 
+0. look into implementing encryption / hashing for requests. HIPAA compliance and privacy features.
+1. use this to kill threads on ports you know  - make a better run_app.sh. 
 	kill $(sudo lsof -t -i :<PORT>)
-
-probably a good idea to make a better run_app.sh and script for killing any threads you missed. 
 
 independant of the icd codes 
 2. implement image processing tools -- model server + at least 1 image feature computer in C. 
 3. implement signals processing tools. 
+
+
+
+# Chest X-Ray Database 
+https://www.kaggle.com/datasets/nih-chest-xrays/data
+
+Liscence per kaggle : CC0 Public Domain -- another creative commons liscence
+
+Paper: Wang X, Peng Y, Lu L, Lu Z, Bagheri M, Summers RM. ChestX-ray8: Hospital-scale Chest X-ray Database and Benchmarks on Weakly-Supervised Classification and Localization of Common Thorax Diseases. IEEE CVPR 2017, ChestX-ray8_Hospital-Scale_Chest_CVPR_2017_paper.pdf
 
 
 # Coding systems
