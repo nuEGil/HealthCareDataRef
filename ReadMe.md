@@ -42,6 +42,8 @@ A way to think about this --> the entirety of wikipedia is more bytes than the n
 
 # TODO
 0. look into implementing encryption / hashing for requests. HIPAA compliance and privacy features.
+
+
 1. use this to kill threads on ports you know  - make a better run_app.sh. 
 	kill $(sudo lsof -t -i :<PORT>)
 
@@ -53,6 +55,9 @@ independant of the icd codes
 
 # Chest X-Ray Database 
 https://www.kaggle.com/datasets/nih-chest-xrays/data
+
+Look into the ICD codes for the Heart. Currently things like cardiomegaly dont come up under 3 digit codes. 
+they can be found on page one though when doing terms: caridomegally
 
 Liscence per kaggle : CC0 Public Domain -- another creative commons liscence
 
