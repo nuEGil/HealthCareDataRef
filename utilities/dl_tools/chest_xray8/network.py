@@ -1,7 +1,10 @@
+import os
+import csv
 import torch
 import torch.nn as nn 
 import torch.optim as optim 
 import numpy as np
+from PIL import Image
 
 class Block(nn.Module):
     def __init__(self, input_shape = [256, 256], n_kerns_in = 64, n_kerns_out=64, cc = 'enc'):
@@ -145,6 +148,43 @@ def NTXEntLoss(z, n_samps, device):
     loss = loss / (2*n_samps)
     return loss
 
+class DataSampler():
+    def __init__(self, device):
+        dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
+        csv_name = os.path.join(dir_, 'set1.csv')
+        
+        self.target_size = (128, 128)  # (W, H) for PIL
+        self.device = device
+        paths = []
+        with open(csv_name, mode='r', newline='', encoding='utf-8') as ff:
+            reader = csv.reader(ff)
+            next(reader) # skip the header. 
+            for row in reader:
+                paths.append(os.path.join(os.environ['CHESTXRAY8_BASE_DIR'],row[0]))
+
+        self.paths = np.array(paths) # works on strings. -- can shuffle in place now. 
+
+    def load_samples(self, id=0, n_samples = 5):
+        # xx = np.random.rand(n_samps, 3, 128, 128).astype(np.float32)
+        # self.n_sampe
+        # x_kn = torch.from_numpy(xx).to(device)
+        xx = torch.zeros((2*n_samples,3,128,128), dtype =torch.float32)
+        for ii in range(0, n_samples):
+            img = Image.open(self.paths[id+ii]).convert('RGB').resize(self.target_size, Image.BILINEAR)
+            img = np.array(img) / 255.0
+            # augmentations right in the loop
+            aug1 = img**2
+            aug2 = np.sqrt(img)
+            xx[2*ii,...] =  torch.from_numpy(aug1).permute(2, 0, 1).float()
+            xx[2*ii+1,...] =  torch.from_numpy(aug2).permute(2, 0, 1).float() 
+            
+        xx = xx.to(device)
+        return xx
+    
+    def shuffle(self):
+        self.paths.shuffle()
+
+
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"------ Using device: {device} ------")
@@ -161,28 +201,14 @@ if __name__ == '__main__':
     # say you draw a sample of 10 images
     n_samps = 5
 
-    xx = np.random.rand(n_samps, 3, 128, 128).astype(np.float32)
-    x_kn = torch.from_numpy(xx).to(device)
-
-    # augmentations
-    x_pos = x_kn ** 2
-    x_neg = torch.sqrt(x_kn)
-
-    # weave together
-    x_2kn = torch.zeros(
-        (2 * n_samps, 3, 128, 128),
-        dtype=torch.float32,
-        device=device
-    )
-    # view will scale better but lets leave as is for readability
-    x_2kn[0::2] = x_pos
-    x_2kn[1::2] = x_neg
-
-       
-    y_pred = model(x_2kn)
+    
+    DSampler = DataSampler(device)
+    X = DSampler.load_samples()   
+    y_pred = model(X)
+    
     # on calling you want (Nsamples, Channels in, Height in, Width in)
     print('y_pred shape' , y_pred.shape)
     # optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    NTXEntLoss(y_pred, n_samps= n_samps, device = device)
-
+    loss = NTXEntLoss(y_pred, n_samps= n_samps, device = device)
+    print(loss)
     # last step in the paper is to throw away the mlp stack . 
