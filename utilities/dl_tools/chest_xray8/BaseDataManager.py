@@ -217,9 +217,26 @@ def getSubsetData(tag='Mass'):
         print(r)
 
     con.close() # close .db file
+    return rows
+
+def toCSV(data_):
+    dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
+    csv_name = os.path.join(dir_, 'set1.csv')
+    with open(csv_name, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "path", "label", "x", "y", "w", "h",
+            "img_w", "img_h", "x_scale", "y_scale"
+        ])
+
+        for d in data_: 
+            writer.writerow(d)
 
 if __name__ == '__main__':
     # start database - only run once. 
     # startSQLLiteDB()
-    getSubsetData()
+    rows = getSubsetData(tag = "Mass")
+
+    toCSV(rows)
+
      

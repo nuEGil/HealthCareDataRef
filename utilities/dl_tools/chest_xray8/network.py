@@ -131,22 +131,18 @@ def NTXEntLoss(z, n_samps, device):
     numer = torch.exp(sij/tau)
     
     mask = (1-torch.eye(2*n_samps, device=device))
-
     denom = mask * torch.exp(sij/tau)
     denom = denom.sum(dim = 1, keepdim=True)
+    
+    # lij 
     lij = -torch.log(numer /denom.squeeze())
 
     loss = 0
     for k in range(1, n_samps+1):
         a = (2*k-1) -1
         b = (2*k) -1
-        
         loss+= (lij[a, b] + lij[b, a])
     loss = loss / (2*n_samps)
-    # print('cosine sim shape ', a.shape, b.shape)
-    # print(sij.shape, )#sij)
-    # print('lij shape,', lij.shape)
-    # print('loss:', loss)
     return loss
 
 if __name__ == '__main__':
@@ -161,7 +157,7 @@ if __name__ == '__main__':
     # print a copy of the model.
     print(model)
     
-    # but this would all be part of a data loader 
+    # but this would all be part of a data loader ----
     # say you draw a sample of 10 images
     n_samps = 5
 
