@@ -234,7 +234,6 @@ def modeltraining(optimizer, loader, model, epochs):
 
     return log_, model, optimizer
 
-
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"------ Using device: {device} ------")
