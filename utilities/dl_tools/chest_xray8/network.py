@@ -12,6 +12,7 @@ Implement augmentation policies - paper has cropping and color distortion as it'
 
 argparse for hyper parameter tuning
 use torch data set - has next method for this thing
+implement timing to measure batch load training time. 
 '''
 
 class Block(nn.Module):
@@ -196,8 +197,7 @@ class log_file():
     step: list = field(default_factory=list)
     training_loss: list = field(default_factory=list)
 
-
-def modeltraining(loader, model, epochs):
+def modeltraining(optimizer, loader, model, epochs):
     NN = loader.paths.shape[0] // loader.batch_size
     log_ = log_file()
     odir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data/model_0')
@@ -250,4 +250,4 @@ if __name__ == '__main__':
 
     DSampler = DataSampler(device, batch_size=20)
 
-    modeltraining(DSampler, model, epochs=20)
+    modeltraining(optimizer, DSampler, model, epochs=20)
