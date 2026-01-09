@@ -6,8 +6,12 @@ import torch.optim as optim
 import numpy as np
 from PIL import Image
 from dataclasses import dataclass, field
-'''use torch data set - has next method for this thing
-patches instead of images.
+'''
+Use pathches instead of full images --> full xray data at 128x128 likely wont be informative
+Implement augmentation policies - paper has cropping and color distortion as it's main 2
+
+argparse for hyper parameter tuning
+use torch data set - has next method for this thing
 '''
 
 class Block(nn.Module):
@@ -239,12 +243,11 @@ if __name__ == '__main__':
     model = BlockStack( input_shape = [3, 128,128], nblocks = 4, n_kerns = 32, 
                         width_param = 2, pool_rate = 2, n_out = 128)
     model = model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=1e-2)
     
     # print a copy of the model.
     print(model)
 
+    DSampler = DataSampler(device, batch_size=20)
 
-    DSampler = DataSampler(device, batch_size=10)
-
-    modeltraining(DSampler, model, epochs=10)
+    modeltraining(DSampler, model, epochs=20)
