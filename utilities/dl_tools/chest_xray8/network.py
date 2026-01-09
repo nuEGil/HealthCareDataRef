@@ -5,6 +5,10 @@ import torch.nn as nn
 import torch.optim as optim 
 import numpy as np
 from PIL import Image
+from dataclasses import dataclass, field
+'''use torch data set - has next method for this thing
+patches instead of images.
+'''
 
 class Block(nn.Module):
     def __init__(self, input_shape = [256, 256], n_kerns_in = 64, n_kerns_out=64, cc = 'enc'):
@@ -126,7 +130,7 @@ def NTXEntLoss(z, n_samps, device):
     cos = nn.CosineSimilarity(dim=0, eps=1e-6) # compute along dim 
     sij = torch.zeros((2*n_samps, 2*n_samps),
         dtype=torch.float32, device=device)
-    print('sij shape ', sij.shape)
+    # print('sij shape ', sij.shape)
     for i in range(2*n_samps):
         for j in range(2*n_samps):
             sij[i, j] = cos(z[i,...], z[j,...]) # reference makes this (features,) not (batch, features)
@@ -146,13 +150,14 @@ def NTXEntLoss(z, n_samps, device):
         b = (2*k) -1
         loss+= (lij[a, b] + lij[b, a])
     loss = loss / (2*n_samps)
+    # print('batch loss : ', loss)
     return loss
 
 class DataSampler():
-    def __init__(self, device):
+    def __init__(self, device, batch_size = 5):
         dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
         csv_name = os.path.join(dir_, 'set1.csv')
-        
+        self.batch_size = batch_size
         self.target_size = (128, 128)  # (W, H) for PIL
         self.device = device
         paths = []
@@ -163,13 +168,11 @@ class DataSampler():
                 paths.append(os.path.join(os.environ['CHESTXRAY8_BASE_DIR'],row[0]))
 
         self.paths = np.array(paths) # works on strings. -- can shuffle in place now. 
+        
 
-    def load_samples(self, id=0, n_samples = 5):
-        # xx = np.random.rand(n_samps, 3, 128, 128).astype(np.float32)
-        # self.n_sampe
-        # x_kn = torch.from_numpy(xx).to(device)
-        xx = torch.zeros((2*n_samples,3,128,128), dtype =torch.float32)
-        for ii in range(0, n_samples):
+    def load_samples(self, id=0):
+        xx = torch.zeros((2*self.batch_size,3,128,128), dtype = torch.float32)
+        for ii in range(0, self.batch_size):
             img = Image.open(self.paths[id+ii]).convert('RGB').resize(self.target_size, Image.BILINEAR)
             img = np.array(img) / 255.0
             # augmentations right in the loop
@@ -184,6 +187,49 @@ class DataSampler():
     def shuffle(self):
         self.paths.shuffle()
 
+@dataclass
+class log_file():
+    step: list = field(default_factory=list)
+    training_loss: list = field(default_factory=list)
+
+
+def modeltraining(loader, model, epochs):
+    NN = loader.paths.shape[0] // loader.batch_size
+    log_ = log_file()
+    odir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data/model_0')
+    tag = '00'
+    for steps in range(epochs):
+        total_loss = 0
+        for sub in range(0, loader.paths.shape[0]-loader.batch_size, loader.batch_size):
+            # sample a batch of data 
+            X = loader.load_samples(id=sub)
+            y_pred = model(X)
+            loss = NTXEntLoss(y_pred, n_samps= loader.batch_size, device = device)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+
+        print(f"Epoch [{steps+1}/{epochs}], Loss: {total_loss/NN:.4f}")
+        # print(f'steps: {steps}/{N_steps}, training loss: ', loss.item())
+        log_.step.append(steps)
+        log_.training_loss.append(total_loss/NN)
+        
+        if steps%5 == 0: 
+            torch.save({
+                        'epoch': steps,
+                        'model_state': model.state_dict(),
+                        # 'optimizer_state': optimizer.state_dict(),
+                    }, f'{odir}/mod_tag-{tag}_steps-{steps}.pt')
+
+    torch.save({
+                'epoch': steps,
+                'model_state': model.state_dict(),
+                # 'optimizer_state': optimizer.state_dict(),
+            }, f'{odir}/mod_tag-{tag}_steps-{steps}.pt')
+
+    return log_, model, optimizer
+
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -193,22 +239,12 @@ if __name__ == '__main__':
     model = BlockStack( input_shape = [3, 128,128], nblocks = 4, n_kerns = 32, 
                         width_param = 2, pool_rate = 2, n_out = 128)
     model = model.to(device)
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
     
     # print a copy of the model.
     print(model)
-    
-    # but this would all be part of a data loader ----
-    # say you draw a sample of 10 images
-    n_samps = 5
 
-    
-    DSampler = DataSampler(device)
-    X = DSampler.load_samples()   
-    y_pred = model(X)
-    
-    # on calling you want (Nsamples, Channels in, Height in, Width in)
-    print('y_pred shape' , y_pred.shape)
-    # optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    loss = NTXEntLoss(y_pred, n_samps= n_samps, device = device)
-    print(loss)
-    # last step in the paper is to throw away the mlp stack . 
+
+    DSampler = DataSampler(device, batch_size=10)
+
+    modeltraining(DSampler, model, epochs=10)
