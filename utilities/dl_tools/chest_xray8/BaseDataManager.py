@@ -188,7 +188,7 @@ def startSQLLiteDB():
     con.commit()# commit after insert. 
     con.close() # close .db file
 
-def getSubsetData():
+def getSubsetData(tag='Mass'):
     # staring up the db
     dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
     db_name = os.path.join(dir_, 'consolidated_sheets.db')
@@ -209,7 +209,7 @@ def getSubsetData():
         JOIN dataEntry2017 d USING (image_ind)
         WHERE b.finding_label LIKE ?
         """,
-        ("%Effusion%",)
+        (f"%{tag}%",)
     )
 
     rows = cur.fetchall()

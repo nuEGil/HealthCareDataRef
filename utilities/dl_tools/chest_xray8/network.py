@@ -116,22 +116,77 @@ class BlockStack(nn.Module):
             x = layer(x)
         return x   
 
+def NTXEntLoss(z, n_samps, device):
+    # follow https://arxiv.org/abs/2002.05709
+    # set xk including a positive pair of example xj and xk
+    tau = 0.5 # temperature param
+    cos = nn.CosineSimilarity(dim=0, eps=1e-6) # compute along dim 
+    sij = torch.zeros((2*n_samps, 2*n_samps),
+        dtype=torch.float32, device=device)
+    print('sij shape ', sij.shape)
+    for i in range(2*n_samps):
+        for j in range(2*n_samps):
+            sij[i, j] = cos(z[i,...], z[j,...]) # reference makes this (features,) not (batch, features)
+    
+    numer = torch.exp(sij/tau)
+    
+    mask = (1-torch.eye(2*n_samps, device=device))
+
+    denom = mask * torch.exp(sij/tau)
+    denom = denom.sum(dim = 1, keepdim=True)
+    lij = -torch.log(numer /denom.squeeze())
+
+    loss = 0
+    for k in range(1, n_samps+1):
+        a = (2*k-1) -1
+        b = (2*k) -1
+        
+        loss+= (lij[a, b] + lij[b, a])
+    loss = loss / (2*n_samps)
+    # print('cosine sim shape ', a.shape, b.shape)
+    # print(sij.shape, )#sij)
+    # print('lij shape,', lij.shape)
+    # print('loss:', loss)
+    return loss
+
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"------ Using device: {device} ------")
     
     # define the model and sent it to the device
     model = BlockStack( input_shape = [3, 128,128], nblocks = 4, n_kerns = 32, 
-                        width_param = 2, pool_rate = 2, n_out = 3)
+                        width_param = 2, pool_rate = 2, n_out = 128)
     model = model.to(device)
     
-
     # print a copy of the model.
     print(model)
-    xx = np.random.rand(1, 3, 128,128).astype(np.float32)
-    input_ = torch.from_numpy(xx).to(device)
     
-    output = model(input_)
+    # but this would all be part of a data loader 
+    # say you draw a sample of 10 images
+    n_samps = 5
+
+    xx = np.random.rand(n_samps, 3, 128, 128).astype(np.float32)
+    x_kn = torch.from_numpy(xx).to(device)
+
+    # augmentations
+    x_pos = x_kn ** 2
+    x_neg = torch.sqrt(x_kn)
+
+    # weave together
+    x_2kn = torch.zeros(
+        (2 * n_samps, 3, 128, 128),
+        dtype=torch.float32,
+        device=device
+    )
+    # view will scale better but lets leave as is for readability
+    x_2kn[0::2] = x_pos
+    x_2kn[1::2] = x_neg
+
+       
+    y_pred = model(x_2kn)
     # on calling you want (Nsamples, Channels in, Height in, Width in)
-    print(output.shape)
+    print('y_pred shape' , y_pred.shape)
     # optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    NTXEntLoss(y_pred, n_samps= n_samps, device = device)
+
+    # last step in the paper is to throw away the mlp stack . 
