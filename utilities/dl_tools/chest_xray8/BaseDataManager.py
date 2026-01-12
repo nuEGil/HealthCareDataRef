@@ -19,6 +19,8 @@ add an argparse
 2. get sample classes of interest - split list of words, and run sql queries to return subsets 
 
 
+when you do refactor....  there's gonna be an entirely different pipeline for no fnding unless you 
+default the bounding box to 0,0,rows,cols
 '''
 # data classes 
 @dataclass
@@ -183,12 +185,61 @@ def startSQLLiteDB():
         command+="VALUES ("+"?,"*11
         command=command[0:-1]+")"
         # print('Last command  ', command)
-        cur.execute(command, (de.image_ind, bb.finding_label, 
+        cur.execute(command, (de.image_ind, de.finding_label, 
                               de.follow_up_num, de.patient_id, de.patient_age, de.patient_gender,
                               de.view_position, *de.originalImage_wh, *de.originalImage_xyres))
 
     con.commit()# commit after insert. 
     con.close() # close .db file
+
+def getFindingCounts():
+    # staring up the db
+    dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
+    db_name = os.path.join(dir_, 'consolidated_sheets.db')
+  
+    con = sqlite3.connect(db_name) # can store the icd10 CM + PCS together later idk
+    cur = con.cursor()
+    comm = """
+            SELECT finding_label, COUNT(*) AS cnt
+            FROM dataEntry2017
+            GROUP BY finding_label
+            ORDER BY cnt DESC;
+            """
+    
+    cur.execute(comm)
+    rows = cur.fetchall()
+    # print('Finding counts')
+    # for label, cnt in rows:
+    #         print(label, cnt)
+        
+    outname = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
+    outname = os.path.join(outname, 'finding_distro.csv')
+    with open(outname, "w", newline="") as ff:
+        writer = csv.writer(ff)
+        writer.writerow(["finding_label", "count"])
+        writer.writerows(rows)            
+    con.close() # close .db file
+    print('Wrote finding counts to csv. check user meta_data')
+
+def toCSV(data_, fname_, tag):
+    dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
+    csv_name = os.path.join(dir_, fname_)
+    
+    if tag == 'No Finding':
+        row_list = ["path", "label", "img_w", "img_h", "x_scale", "y_scale"]
+    else:
+        row_list = [
+            "path", "label", "x", "y", "w", "h",
+            "img_w", "img_h", "x_scale", "y_scale"
+        ]
+    
+    with open(csv_name, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(row_list)
+
+        for d in data_: 
+            print(d)
+            writer.writerow(d)
 
 def getSubsetData(tag='Mass'):
     # staring up the db
@@ -198,8 +249,20 @@ def getSubsetData(tag='Mass'):
     con = sqlite3.connect(db_name) # can store the icd10 CM + PCS together later idk
     cur = con.cursor()
 
-    cur.execute(
+    if tag == "No Finding":
+        print('running no finding case')
+        comm = """
+        SELECT
+            p.path,
+            d.finding_label,
+            d.original_w, d.original_h,
+            d.original_xres, d.original_yres
+        FROM dataEntry2017 d
+        JOIN paths p USING (image_ind)      
+        WHERE d.finding_label LIKE ?
         """
+    else:
+        comm = """
         SELECT
             p.path,
             b.finding_label,
@@ -210,35 +273,27 @@ def getSubsetData(tag='Mass'):
         JOIN paths p USING (image_ind)
         JOIN dataEntry2017 d USING (image_ind)
         WHERE b.finding_label LIKE ?
-        """,
-        (f"%{tag}%",)
-    )
-
+        """
+    # print(comm)
+    # print((f"%{tag}%",))
+    cur.execute(comm, (f"%{tag}%",))
+    
     rows = cur.fetchall()
     for r in rows:
         print(r)
 
     con.close() # close .db file
+
+    # save to csv file 
+    toCSV(rows, fname_=tag+'_set.csv', tag=tag)
     return rows
-
-def toCSV(data_):
-    dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
-    csv_name = os.path.join(dir_, 'set1.csv')
-    with open(csv_name, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            "path", "label", "x", "y", "w", "h",
-            "img_w", "img_h", "x_scale", "y_scale"
-        ])
-
-        for d in data_: 
-            writer.writerow(d)
 
 if __name__ == '__main__':
     # start database - only run once. 
     # startSQLLiteDB()
+    getFindingCounts()
+    
     rows = getSubsetData(tag = "Mass")
-
-    toCSV(rows)
-
+    rows = getSubsetData(tag = "No Finding")
+    
      
