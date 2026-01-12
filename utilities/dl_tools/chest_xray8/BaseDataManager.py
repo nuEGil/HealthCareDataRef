@@ -18,6 +18,7 @@ add an argparse
 1. start database
 2. get sample classes of interest - split list of words, and run sql queries to return subsets 
 refactored into a class. got train_test targets. ok. now just need to add that into the subset generator . 
+
 '''
 # data classes 
 @dataclass
@@ -300,7 +301,7 @@ class DBBUilder():
         for r in rows:
             print(r)
 
-        # save to csv file 
+        # --------        
         toCSV(rows, fname_=tag+'_set.csv', tag=tag)
         return rows
 
@@ -314,7 +315,7 @@ def startSQLLiteDB():
  
     builder = DBBUilder()
     # run once -
-    builder.GetImgPaths()
+    # builder.GetImgPaths()
     # builder.GetBBoxList2017()
     # builder.GetdataEntry2017()
     # builder.GetTrainTestTags()
@@ -323,7 +324,7 @@ def startSQLLiteDB():
     # run any number of times. 
     builder.getFindingCounts()
     builder.getTagCouts() 
-    builder.getSubsetData(tag='Mass')
+    builder.getSubsetData(tag='Mass') 
     builder.getSubsetData(tag='No Finding')
      
     # always run
