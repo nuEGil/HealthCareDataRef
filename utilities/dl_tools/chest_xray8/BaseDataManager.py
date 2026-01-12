@@ -203,6 +203,32 @@ class DBBUilder():
                                 de.view_position, *de.originalImage_wh, *de.originalImage_xyres))
         return da_entries
 
+    def GetTrainTestTags(self):
+        
+        self.cur.execute("""CREATE TABLE IF NOT EXISTS train_tags (
+        id INTEGER PRIMARY KEY,
+        image_ind TEXT,
+        tag TEXT
+        );
+        """)
+        
+        def miniparse(fname_ = "train_val_list.txt", tag = "train_val"):
+            # Then get the training and testing tags. 
+            dat_list = os.environ['CHESTXRAY8_BASE_DIR']
+            dat_list = os.path.join(dat_list, fname_)
+            
+            with open(dat_list, "r", encoding ="utf-8") as ff:
+                dat_ = ff.readlines()
+            # insert train/val
+            for img in dat_:
+                self.cur.execute(
+                    "INSERT INTO train_tags (image_ind, tag) VALUES (?, ?)",
+                    (img, tag)
+                )
+
+        miniparse(fname_ = "train_val_list.txt", tag = "train_val")
+        miniparse(fname_ = "test_list.txt", tag = "test")
+       
     def getFindingCounts(self):
         comm = """
                 SELECT finding_label, COUNT(*) AS cnt
@@ -221,6 +247,25 @@ class DBBUilder():
             writer.writerows(rows)            
         
         print('Wrote finding counts to csv. check user meta_data')
+
+    def getTagCouts(self):
+        comm = """
+                SELECT tag, COUNT(*) AS cnt
+                FROM train_tags
+                GROUP BY tag
+                ORDER BY cnt DESC;
+                """
+        self.cur.execute(comm)
+        rows = self.cur.fetchall()
+
+        outname = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data')
+        outname = os.path.join(outname, 'tag_distro.csv')
+        with open(outname, "w", newline="") as ff:
+            writer = csv.writer(ff)
+            writer.writerow(["tag", "count"])
+            writer.writerows(rows)            
+        
+        print('wrote tag distro')
 
     def getSubsetData(self, tag='Mass'):
    
@@ -263,8 +308,8 @@ class DBBUilder():
 
     def commitNow(self):
         self.con.commit()# commit after insert.
+    
     def clean_up(self):
-         
         self.con.close() # close .db file
 
 def startSQLLiteDB():
@@ -274,10 +319,12 @@ def startSQLLiteDB():
     builder.GetImgPaths()
     builder.GetBBoxList2017()
     builder.GetdataEntry2017()
+    builder.GetTrainTestTags()
     builder.commitNow() # on commit to get all things in there. or maybe commit after each call idk. 
     
     # run any number of times. 
-    builder.getFindingCounts() 
+    builder.getFindingCounts()
+    builder.getTagCouts() 
     builder.getSubsetData(tag='Mass')
     builder.getSubsetData(tag='No Finding')
     # -- add one int for training / testing labels. 
@@ -290,9 +337,6 @@ def startSQLLiteDB():
 if __name__ == '__main__':
     # start database - only run once. 
     startSQLLiteDB()
-    # getFindingCounts()
-    
-    # rows = getSubsetData(tag = "Mass")
-    # rows = getSubsetData(tag = "No Finding")
+   
     
      
