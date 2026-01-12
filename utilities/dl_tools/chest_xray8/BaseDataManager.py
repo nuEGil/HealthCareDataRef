@@ -17,6 +17,8 @@ when we want to pull a sub set, it'll pay off.
 add an argparse 
 1. start database
 2. get sample classes of interest - split list of words, and run sql queries to return subsets 
+
+
 '''
 # data classes 
 @dataclass
