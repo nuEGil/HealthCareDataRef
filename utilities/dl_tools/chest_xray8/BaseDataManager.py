@@ -17,11 +17,7 @@ when we want to pull a sub set, it'll pay off.
 add an argparse 
 1. start database
 2. get sample classes of interest - split list of words, and run sql queries to return subsets 
-
-when you do refactor....  there's gonna be an entirely different pipeline for no fnding unless you 
-default the bounding box to 0,0,rows,cols
-
-final bit to this is to say which are for training_val and testing... ok. 
+refactored into a class. got train_test targets. ok. now just need to add that into the subset generator . 
 '''
 # data classes 
 @dataclass
@@ -204,7 +200,9 @@ class DBBUilder():
         return da_entries
 
     def GetTrainTestTags(self):
-        
+        # these are from the text files that come with the set. not all classes are included.
+        # in the training_val set or in the test set as defined. keeping this for 
+        # completeness, but define your own train/val/test tags. 
         self.cur.execute("""CREATE TABLE IF NOT EXISTS train_tags (
         id INTEGER PRIMARY KEY,
         image_ind TEXT,
@@ -221,6 +219,7 @@ class DBBUilder():
                 dat_ = ff.readlines()
             # insert train/val
             for img in dat_:
+                # print('img ind ', img)
                 self.cur.execute(
                     "INSERT INTO train_tags (image_ind, tag) VALUES (?, ?)",
                     (img, tag)
@@ -273,12 +272,12 @@ class DBBUilder():
             print('running no finding case')
             comm = """
             SELECT
-                p.path,
+                p.path, 
                 d.finding_label,
                 d.original_w, d.original_h,
                 d.original_xres, d.original_yres
             FROM dataEntry2017 d
-            JOIN paths p USING (image_ind)      
+            JOIN paths p USING (image_ind)
             WHERE d.finding_label LIKE ?
             """
         else:
@@ -289,13 +288,12 @@ class DBBUilder():
                 b.x, b.y, b.w, b.h,
                 d.original_w, d.original_h,
                 d.original_xres, d.original_yres
+            
             FROM BBoxList2017 b
             JOIN paths p USING (image_ind)
             JOIN dataEntry2017 d USING (image_ind)
             WHERE b.finding_label LIKE ?
             """
-        # print(comm)
-        # print((f"%{tag}%",))
         self.cur.execute(comm, (f"%{tag}%",))
         
         rows = self.cur.fetchall()
@@ -317,22 +315,19 @@ def startSQLLiteDB():
     builder = DBBUilder()
     # run once -
     builder.GetImgPaths()
-    builder.GetBBoxList2017()
-    builder.GetdataEntry2017()
-    builder.GetTrainTestTags()
-    builder.commitNow() # on commit to get all things in there. or maybe commit after each call idk. 
+    # builder.GetBBoxList2017()
+    # builder.GetdataEntry2017()
+    # builder.GetTrainTestTags()
+    # builder.commitNow() # on commit to get all things in there. or maybe commit after each call idk. 
     
     # run any number of times. 
     builder.getFindingCounts()
     builder.getTagCouts() 
     builder.getSubsetData(tag='Mass')
     builder.getSubsetData(tag='No Finding')
-    # -- add one int for training / testing labels. 
-    
+     
     # always run
     builder.clean_up()   
-
-
 
 if __name__ == '__main__':
     # start database - only run once. 

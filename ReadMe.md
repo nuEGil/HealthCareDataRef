@@ -37,7 +37,7 @@ A way to think about this --> the entirety of wikipedia is more bytes than the n
 ### utilities/dltools/chest_xray8
 1. BaseDataManager.py : script to sub sample training batches from the main spreadsheet files. 
 
-
+Note -> Data Entry will have labels for every image in the set as far as I can tell. But it doesnt have bounding boxes for every image in the set. This means if you try to join train_val_list or test_list with the other provided csv files, the data won't always survive the filter... so you have to make your own train, test, val split if you want to include all the classes in your evaluation. 
 
 ### services
 1. icd10_dbsearch.py: given an http request it searches the icd10 database and returns the entry --> code, name, short description, long description -- user can enter text, but the database only has the medical term, not layman's terms. For example "ear infection" wont return anything. You need to search otitis.
