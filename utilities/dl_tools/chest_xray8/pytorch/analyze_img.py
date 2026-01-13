@@ -13,6 +13,23 @@ from torchvision.models import resnet50, ResNet50_Weights
 
 from fineTuneResNet import loadResNet50
 
+'''
+split the loop up and see if you can run with multiple processes since 
+pytorch doesnt allocate the entire gpu 
+
+use an inverse hanning window, or down weight as you get closer to the center. 
+heat map will bias towards the center of the image. 
+
+add argparse to set threshold on model probability. 
+
+likely you need to go lower in the patch size during training to try to get 
+a finer map. 
+
+other thing to try is to stop before the last max pool layer and use that 
+to go fully convolutional resnet...  try this first. 
+think about network surgery
+'''
+
 def getImagePaths():
     img_dir =  os.environ['CHESTXRAY8_BASE_DIR']
     mass_set = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/Mass_set.csv')
@@ -78,6 +95,8 @@ class model_runner():
         # you need to copy the architecture exactly for this to work. 
         # remember we have the json file for parame setting --> use this when making custom archiectures. 
         self.model, self.transforms = loadResNet50(num_classes=2) # use model arch from training
+        print(self.model)
+        
         self.model.load_state_dict(ckpt['model_state'])
         self.model.to(self.device)
         self.model.eval()
@@ -92,7 +111,9 @@ class model_runner():
         # so now gen is compatible with next -> next(gen)
         gen = patch_generator(img0, patch_size=patch_size) # gonna make a new patch generator every time.
         
-        thr = 0.85
+        thr = 0.9
+        c = patch_size // 2
+
         with torch.no_grad():
             for patch,i,j in gen:
                 xx = torch.from_numpy(patch).permute(2,0,1).float()
@@ -106,12 +127,12 @@ class model_runner():
                 
                 score = torch.where(score >= thr, score, torch.zeros_like(score))
                 outimg0[i:i+patch_size, j:j+patch_size] = score
+                # outimg0[i + c, j + c] = score
         
         out = outimg0.detach().cpu().numpy()
         return out
 
-if __name__ =='__main__':
-    
+def heat_map_from_patches():
     img_paths = getImagePaths()
     # print('img paths ', img_paths)
     img0 = Image.open(img_paths[0]).convert("RGB")
@@ -144,7 +165,22 @@ if __name__ =='__main__':
 
     full_output = acc / np.clip(cnt, 1, None)
     to_heatmap(M00.output_dir, full_output, name_='heatmap')
-    to_heatmap(M00.output_dir, img0, name_ = 'sourceimg')
+    to_heatmap(M00.output_dir, np.mean(img0, axis = -1), name_ = 'sourceimg')
+
+
+if __name__ =='__main__':
+    img_paths = getImagePaths()
+    # print('img paths ', img_paths)
+    img0 = Image.open(img_paths[0]).convert("RGB")
+    img0 = np.array(img0) / 255.0
+    
+    H, W = img0.shape[:2]
+    acc = np.zeros((H, W), dtype=np.float32)
+    cnt = np.zeros((H, W), dtype=np.float32)
+    
+    M00 = model_runner()
+    out0 = M00.process_img(img0)
+    
     
     
     # overlay
