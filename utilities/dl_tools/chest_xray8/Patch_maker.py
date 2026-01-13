@@ -1,6 +1,10 @@
 import os 
-import csv 
+import csv
+import glob 
+import numpy as np 
+import pandas as pd
 from PIL import Image, ImageDraw
+
 
 def draw_bounding_boxes():
     mass_patch = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data/Mass_set.csv')
@@ -35,7 +39,6 @@ def draw_bounding_boxes():
             j+=1
             if j>25:
                 break
-
 
 def saveSubPatches(outpath, imname, img, bbox, patch_size = 128, stride = 128):
     print('OUT PATH ', outpath)
@@ -91,7 +94,6 @@ def cropToPatch():
             os.makedirs(outpath+'/bg')
 
         for row in reader:
-            # box.append(row)
             img_name = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], row[0])
             img = (Image.open(img_name)
                    .convert("RGB"))
@@ -99,12 +101,90 @@ def cropToPatch():
             bbox = list(map(int, bbox))
              
             saveSubPatches(outpath, img_name, img, bbox, patch_size = 128, stride = 128)
-            # outpath = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'],f'user_meta_data/patch_sets/patch_{j}.png')
-            # img.save(outpath)
-            j+=1
-            if j>25:
-                break
 
+            # j+=1
+            # if j>25:
+            #     break
+
+def organize_patch_paths():
+    outpath = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'],f'user_meta_data/patch_sets/mass1')
+    fnames = glob.glob(os.path.join(outpath, '*/*.png'))  
+    csv_out = os.path.join(outpath, "patch_files.csv")
+
+    with open(csv_out, "w", newline="") as ff:
+        writer = csv.writer(ff)
+        writer.writerow(["filename", "label"])
+
+        for f in fnames:
+            label = os.path.splitext(f)[0].split("label-")[-1]
+            writer.writerow([f, int(label)])
+
+
+# this is extra stuff to try to prevent training images from leaking to the test set. 
+def split_data():
+    outpath = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'],f'user_meta_data/patch_sets/mass1')
+    fnames = glob.glob(os.path.join(outpath, '*/*.png'))  
+    csv_out = os.path.join(outpath, "patch_files.csv")
+    
+    df = pd.read_csv(csv_out)
+
+    # image_ind = everything before "_x-"
+    df["image_ind"] = (
+    df["filename"]
+    .str.split("/")           # split path
+    .str[-1]                  # basename
+    .str.split("_")           # split parts
+    .str[:2]                  # first two tokens
+    .str.join("_")            # rejoin
+)
+
+    print(df.head())
+    print(df.image_ind.unique())
+    
+    # random number generator
+    rng = np.random.default_rng(42)
+    img_inds = df.image_ind.unique()
+
+    rng.shuffle(img_inds)
+
+    n_train = int(0.8 * len(img_inds))
+    train_imgs = img_inds[:n_train]
+    test_imgs  = img_inds[n_train:]
+
+
+    train_rows = []
+    test_rows = []
+
+    for img in train_imgs:
+        rows = df[df.image_ind == img]
+        train_rows.append(rows)
+
+    for img in test_imgs:
+        rows = df[df.image_ind == img]
+        test_rows.append(rows)
+
+    train_df = pd.concat(train_rows)
+    test_df  = pd.concat(test_rows)
+
+    train_pos = train_df[train_df.label == 1]
+    train_neg = train_df[train_df.label == 0].sample(
+        n=len(train_pos), random_state=42
+    )
+
+    test_pos = test_df[test_df.label == 1]
+    test_neg = test_df[test_df.label == 0].sample(
+        n=len(test_pos), random_state=42
+    )
+
+    train_df = pd.concat([train_pos, train_pos, train_neg]).sample(frac=1, random_state=42)
+    test_df  = pd.concat([test_pos, test_neg]).sample(frac=1, random_state=42)
+
+    train_df.to_csv(os.path.join(outpath, "train_set.csv"))
+    test_df.to_csv(os.path.join(outpath, "test_set.csv"))
+
+    assert set(train_df.image_ind).isdisjoint(test_df.image_ind)
 
 if __name__ == '__main__':
-    cropToPatch()   
+    # cropToPatch()   
+    # organize_patch_paths()
+    split_data()
