@@ -28,6 +28,9 @@ Remember - goal is a model server that does xyz to the image.
 difference between tf and pytorch in memory allocation. I can run 
 multiple instances of this training script on the same GPU
 TF preallocates all the available gpu memory. Pytorch only allocates what you need. 
+need to look to see if there's any memory leak issues from training like this. 
+need to look into why TF allocates the entire GPU... could be that it has some
+optimizations. for loading data as quickly as possible.  
 
 '''
 def manageArgs():
