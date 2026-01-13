@@ -269,7 +269,21 @@ def buildKnowledgeStore(data_):
     con.close() # close .db file
     return 0 # exit code 
 
+def check_store():
+    # using basically the same commands from the parseICD10 script
+    outname = os.path.join(os.environ["SEARCH_DB_PATH"], "knowledge_store4.db")
+    
+    con = sqlite3.connect(outname) # can store the icd10 CM + PCS together later idk
+    cur = con.cursor()
+    # print some stuff so i know it worked
+    cur.execute("SELECT google_term FROM knowledge_store")
+    for row in cur.fetchall():
+        print(row)
+
+    con.close() # close .db file
+
 if __name__ == '__main__':   
-    TFIDF_Comp_Data = GrabAllEntriesAndTFIDF()
-    # next step is to put it all into an sql database. 
-    buildKnowledgeStore(TFIDF_Comp_Data) # only run once. 
+    # TFIDF_Comp_Data = GrabAllEntriesAndTFIDF()
+    # # next step is to put it all into an sql database. 
+    # buildKnowledgeStore(TFIDF_Comp_Data) # only run once. 
+    check_store()
