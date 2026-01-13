@@ -4,7 +4,7 @@ import glob
 import numpy as np 
 import pandas as pd
 from PIL import Image, ImageDraw
-
+'''probably there's a cleaner way to write this'''
 
 def draw_bounding_boxes():
     mass_patch = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data/Mass_set.csv')

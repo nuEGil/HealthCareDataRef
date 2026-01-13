@@ -13,6 +13,8 @@ Implement augmentation policies - paper has cropping and color distortion as it'
 argparse for hyper parameter tuning
 use torch data set - has next method for this thing
 implement timing to measure batch load training time. 
+
+refactor to make a task.py. make it so you can train a classifier or do sim clr. 
 '''
 
 class Block(nn.Module):
@@ -88,7 +90,7 @@ class MLP(nn.Module):
 class BlockStack(nn.Module):
     # ok so this part works.. just need to keep flattening it out. 
     def __init__(self, input_shape = [3, 128,128], nblocks = 4, n_kerns = 32, 
-                 width_param = 2, pool_rate = 2, n_out=3):
+                 pool_rate = 2, n_out=3, last_activation = 'sigmoid'):
         
         super(BlockStack, self).__init__() # make sure the nn.module init funciton works
         
@@ -107,21 +109,21 @@ class BlockStack(nn.Module):
             self.layers.append(Block(input_shape = input_shape, 
                                      n_kerns_in = n_kerns, 
                                      n_kerns_out = n_kerns, cc = 'enc'))
-
-            self.layers.append(nn.MaxPool2d([2, 2]))
-            # halve the input shape
-            input_shape = [n_kerns, int(input_shape[1]/2), int(input_shape[2]/2)]
+            if n%pool_rate==0:
+                self.layers.append(nn.MaxPool2d([2, 2]))
+                # halve the input shape
+                input_shape = [n_kerns, int(input_shape[1]/2), int(input_shape[2]/2)]
         
         # once we are at the end. we wnat to flatten 
         self.layers.append(nn.Flatten())
 
         # the shape is going to be 
-        flatten_shape = int(((input_shape[1]/num_pools)**2) * n_kerns)
+        flatten_shape = n_kerns * input_shape[1] * input_shape[2]
         # this one reduces the flatten shape to something we can work with
         self.layers.append(nn.Linear(flatten_shape, 64))
         # then this one calls the MLP layer
         self.layers.append(MLP(neurons_in = 64, dropout_rate = 0.5,
-                                n_out = n_out, activation='softmax'))
+                                n_out = n_out, activation=last_activation))
 
     def forward(self, x):
         for layer in self.layers:
@@ -190,7 +192,48 @@ class DataSampler():
         return xx
     
     def shuffle(self):
-        self.paths.shuffle()
+        np.random.shuffle(self.paths)
+
+class ClassifierSampler():
+    def __init__(self, device, batch_size = 5):
+        dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data/patch_sets/mass1')
+        csv_name = os.path.join(dir_, 'train_set.csv')
+        self.batch_size = batch_size
+        self.target_size = (128, 128)  # (W, H) for PIL
+        self.device = device
+        paths = []
+        with open(csv_name, mode='r', newline='', encoding='utf-8') as ff:
+            reader = csv.reader(ff)
+            next(reader) # skip the header. 
+            for row in reader:
+                paths.append(row)
+
+        self.paths = np.array(paths) # works on strings. -- can shuffle in place now. 
+        
+
+    def load_samples(self, id=0):
+        xx = torch.zeros((self.batch_size, 3, 128, 128), dtype=torch.float32)
+        yy = torch.zeros((self.batch_size,), dtype=torch.long)
+
+        for ii in range(self.batch_size):
+            subrow = self.paths[id + ii]
+
+            img = (
+                Image.open(subrow[1])
+                .convert("RGB")
+                .resize(self.target_size, Image.BILINEAR)
+            )
+            img = np.array(img) / 255.0
+
+            lab = int(subrow[2])   # 0 or 1
+
+            xx[ii] = torch.from_numpy(img).permute(2, 0, 1)
+            yy[ii] = lab
+
+        return xx.to(device), yy.to(device)
+    
+    def shuffle(self):
+        np.random.shuffle(self.paths)
 
 @dataclass
 class log_file():
@@ -209,6 +252,49 @@ def modeltraining(optimizer, loader, model, epochs):
             X = loader.load_samples(id=sub)
             y_pred = model(X)
             loss = NTXEntLoss(y_pred, n_samps= loader.batch_size, device = device)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+
+        print(f"Epoch [{steps+1}/{epochs}], Loss: {total_loss/NN:.4f}")
+        # print(f'steps: {steps}/{N_steps}, training loss: ', loss.item())
+        log_.step.append(steps)
+        log_.training_loss.append(total_loss/NN)
+        
+        if steps%5 == 0: 
+            torch.save({
+                        'epoch': steps,
+                        'model_state': model.state_dict(),
+                        # 'optimizer_state': optimizer.state_dict(),
+                    }, f'{odir}/mod_tag-{tag}_steps-{steps}.pt')
+
+    torch.save({
+                'epoch': steps,
+                'model_state': model.state_dict(),
+                # 'optimizer_state': optimizer.state_dict(),
+            }, f'{odir}/mod_tag-{tag}_steps-{steps}.pt')
+
+    return log_, model, optimizer
+
+def classifier_training(optimizer, loader, model, epochs):
+    model.train()
+    NN = loader.paths.shape[0] // loader.batch_size
+    log_ = log_file()
+    odir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data/model_classifier_1')
+    tag = '00'
+    lossf = nn.CrossEntropyLoss()
+    
+    for steps in range(epochs):
+        total_loss = 0
+        loader.shuffle()
+        for sub in range(0, loader.paths.shape[0]-loader.batch_size, loader.batch_size):
+            # sample a batch of data 
+            X, Y_true= loader.load_samples(id=sub)
+            y_pred = model(X)
+            loss = lossf(y_pred, Y_true)
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -239,14 +325,16 @@ if __name__ == '__main__':
     print(f"------ Using device: {device} ------")
     
     # define the model and sent it to the device
-    model = BlockStack( input_shape = [3, 128,128], nblocks = 4, n_kerns = 32, 
-                        width_param = 2, pool_rate = 2, n_out = 128)
+    model = BlockStack( input_shape = [3, 128,128], nblocks = 16, n_kerns = 32, 
+                        pool_rate = 4, n_out = 2, last_activation='sigmoid')
     model = model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=1e-2)
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
     
     # print a copy of the model.
     print(model)
 
-    DSampler = DataSampler(device, batch_size=20)
+    # DSampler = DataSampler(device, batch_size=20)
+    # modeltraining(optimizer, DSampler, model, epochs=20)
 
-    modeltraining(optimizer, DSampler, model, epochs=20)
+    CSampler = ClassifierSampler(device, batch_size=50)
+    classifier_training(optimizer, CSampler, model, epochs=100)
