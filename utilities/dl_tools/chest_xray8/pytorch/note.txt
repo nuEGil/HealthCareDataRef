@@ -1,0 +1,2 @@
+there is a pretrained resnet available check documentation at 
+https://docs.pytorch.org/vision/main/models.html

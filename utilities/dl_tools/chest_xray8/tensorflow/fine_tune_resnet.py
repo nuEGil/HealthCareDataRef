@@ -5,6 +5,11 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications.resnet50 import preprocess_input
 
+'''
+check tf version and cuda version are compatible with this GPU. 
+pip install tensorflow[and-cuda]==2.10.*
+'''
+
 class CustomDataLoader(tf.keras.utils.Sequence):
     def __init__(self, meta_data, batch_size):
         self.data_paths = meta_data['filename'].values # e.g., list of image file paths
