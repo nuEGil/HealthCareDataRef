@@ -13,6 +13,15 @@ great. means the training loop is fine...
 
 so now we have the option to try a few different training set ups. patches vs full image
 vs. n classes. etc. 
+
+finetuning with supervised learning -- you are restricted to bg+ the labeled classes in the data set 
+finetuning with NTXEnt and SimCLR -- you can pick the number of features in the final layer ... 
+
+practically - the output for both is still a vector. for segmentation you need to do post processing
+for full image classification you get one number out. 
+
+Remember - goal is a model server that does xyz to the image. 
+
 '''
 class ClassifierSampler():
     def __init__(self, device, batch_size = 5):
