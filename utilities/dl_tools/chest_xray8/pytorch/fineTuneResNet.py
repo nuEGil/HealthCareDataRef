@@ -32,6 +32,8 @@ need to look to see if there's any memory leak issues from training like this.
 need to look into why TF allocates the entire GPU... could be that it has some
 optimizations. for loading data as quickly as possible.  
 
+need augmentation policies. 
+
 '''
 def manageArgs():
     parser = argparse.ArgumentParser(description="train a model")
