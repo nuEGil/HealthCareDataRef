@@ -7,7 +7,7 @@ from tensorflow.keras.applications.resnet50 import preprocess_input
 
 '''
 check tf version and cuda version are compatible with this GPU. 
-pip install tensorflow[and-cuda]==2.10.*
+pip install tensorflow-gpu==2.10.* 
 '''
 
 class CustomDataLoader(tf.keras.utils.Sequence):
@@ -46,7 +46,6 @@ class CustomDataLoader(tf.keras.utils.Sequence):
         # For example, shuffle data order after each epoch
         pass
     
-
 def make_simple_cnn(input_shape=(128, 128, 3), num_classes=2):
     inputs = tf.keras.Input(shape=input_shape)
 
@@ -76,7 +75,6 @@ def ft_resnet(num_classes):
 
 
     model = tf.keras.models.Model(inputs=base.input, outputs=out)
-
 
 def my_categorical_crossentropy(y_true, y_pred, eps=1e-7):
     # y_true: (batch, C) one-hot
