@@ -22,6 +22,9 @@ for full image classification you get one number out.
 
 Remember - goal is a model server that does xyz to the image. 
 
+also notice -- pytorch allocates memory on the GPU differently -- tensorflow preallocates all of it. 
+pytorch doesnt. 
+
 '''
 class ClassifierSampler():
     def __init__(self, device, batch_size = 5):
