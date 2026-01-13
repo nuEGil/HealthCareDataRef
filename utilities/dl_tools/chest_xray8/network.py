@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim 
 import numpy as np
 from PIL import Image
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 '''
 Use pathches instead of full images --> full xray data at 128x128 likely wont be informative
 Implement augmentation policies - paper has cropping and color distortion as it's main 2
@@ -278,6 +278,14 @@ def modeltraining(optimizer, loader, model, epochs):
 
     return log_, model, optimizer
 
+def save_training_log(fname_full, obj):
+    with open(fname_full, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["step", "training_loss"])  # header
+
+        for s, l in zip(obj.step, obj.training_loss):
+            writer.writerow([s, l])
+
 def classifier_training(optimizer, loader, model, epochs):
     model.train()
     NN = loader.paths.shape[0] // loader.batch_size
@@ -311,6 +319,7 @@ def classifier_training(optimizer, loader, model, epochs):
                         'model_state': model.state_dict(),
                         # 'optimizer_state': optimizer.state_dict(),
                     }, f'{odir}/mod_tag-{tag}_steps-{steps}.pt')
+            save_training_log(os.path.join(odir, 'trainlog.csv'), log_)
 
     torch.save({
                 'epoch': steps,
