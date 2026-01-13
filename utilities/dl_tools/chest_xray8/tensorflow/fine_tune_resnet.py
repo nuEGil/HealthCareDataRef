@@ -13,7 +13,7 @@ def df_to_dataset(df, image_size=64, batch_size=32, shuffle=True):
         img = tf.image.decode_png(img, channels=3)
         img = tf.image.resize(img, [image_size, image_size])
         lab = tf.one_hot(label, depth=2)
-        return preprocess_input(img), label
+        return preprocess_input(img), lab
     
     ds = ds.map(load_img, num_parallel_calls=tf.data.AUTOTUNE)
     if shuffle: ds = ds.shuffle(len(df))
