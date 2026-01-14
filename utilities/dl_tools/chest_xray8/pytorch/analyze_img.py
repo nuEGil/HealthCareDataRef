@@ -38,6 +38,9 @@ and render on the ui side.
 the big image block. still probably need to aggregate at the end. 
 - make a dataclass that will help to sum like this. yeah.. 
 
+if you run it here, you might make it run faster too becasue you dont have to 
+sum up images - just points, then render that way. yeah. think about this before next commit. 
+
 '''
 
 def getImagePaths():
