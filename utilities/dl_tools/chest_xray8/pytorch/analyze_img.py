@@ -15,8 +15,6 @@ from torchvision.models import resnet50, ResNet50_Weights
 from fineTuneResNet import loadResNet50
 from PIL import ImageFilter
 
-
-
 '''
 split the loop up and see if you can run with multiple processes since 
 pytorch doesnt allocate the entire gpu 
@@ -32,6 +30,14 @@ a finer map.
 other thing to try is to stop before the last max pool layer and use that 
 to go fully convolutional resnet...  try this first. 
 think about network surgery
+
+
+Now when you write this into a service, pass back [x,y score] 
+and render on the ui side. 
+- in the model_runner.process_img() you can get this info and just put the offset for 
+the big image block. still probably need to aggregate at the end. 
+- make a dataclass that will help to sum like this. yeah.. 
+
 '''
 
 def getImagePaths():
