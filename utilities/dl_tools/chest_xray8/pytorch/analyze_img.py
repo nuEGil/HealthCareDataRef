@@ -13,6 +13,9 @@ from dataclasses import dataclass, field, asdict
 from torchvision.models import resnet50, ResNet50_Weights
 
 from fineTuneResNet import loadResNet50
+from PIL import ImageFilter
+
+
 
 '''
 split the loop up and see if you can run with multiple processes since 
@@ -70,7 +73,7 @@ def overlay_heatmap_simple(img, heatmap, alpha=0.4):
 def norm(out):
     out = out - out.min()
     out = out / (out.max() + 1e-8)
-    return out
+    return (out * 255).astype(np.uint8)
 
 def pad_left_top(img, pad_left, pad_top):
     H, W = img.shape
@@ -134,7 +137,7 @@ class model_runner():
         gen = patch_generator(img0, patch_size=patch_size) # gonna make a new patch generator every time.
         
         thr = 0.9
-
+        c = patch_size // 2
         with torch.no_grad():
             for patch,i,j in gen:
                 xx = torch.from_numpy(patch).permute(2,0,1).float()
@@ -146,8 +149,15 @@ class model_runner():
                 probs = torch.softmax(y, dim=1)
                 score = probs[0, 1]
                 
+                # # hard threshold
                 score = torch.where(score >= thr, score, torch.zeros_like(score))
                 outimg0[i:i+patch_size, j:j+patch_size] = score
+                
+                # # soft threshold
+                # score = torch.clamp((score - thr) / (1 - thr), 0, 1) # clamps all elements into input range. 
+                # outimg0[i:i+patch_size, j:j+patch_size] += score
+                
+                # center pixel only
                 # outimg0[i + c, j + c] = score
         
         out = outimg0.detach().cpu().numpy()
@@ -253,7 +263,7 @@ def heatmap_gen_dist():
     print('number of large image reps, bbox ',inds.shape)
     # this one already distributes the chunks pretty well
     
-    processes =8
+    processes = 12
     chunks = np.array_split(inds, processes)
     padimg0 = make_padded_image(img0, [img_size + pad_up, img_size + pad_up,3])
 
@@ -270,11 +280,22 @@ def heatmap_gen_dist():
 
     # aggregate results
     for acc, mask in results:
-        acc_final  += acc
+        acc_final  += acc*mask # bias towards pixels that were counted more often. 
         mask_final += mask
 
     # heatmap = acc_final /  np.clip(mask_final, 1, None)
     heatmap = acc_final / np.maximum(mask_final, 1)
+    # in the fast api server you should just pass the user the single pixel locations
+    # then blur and render on the ui side. 
+
+    
+    # # use only for single pixel mapping. - bluring at the display stage is meaningful - its - 
+    # # what are you reporting the the clinician that looks at this thing. - probably want to 
+    # # implement a feature where you get the value as you hover. above the pixel. 
+    # heatmap = Image.fromarray((heatmap * 255).astype(np.uint8))
+    # heatmap = heatmap.filter(ImageFilter.GaussianBlur(radius=2)) # radius could be attached to a slider... interesting. 
+    # heatmap = np.array(heatmap)
+    # heatmap = norm(heatmap)
     
     moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/pytorch_resnet_v2')
     output_dir = os.path.join(moddir, 'outputs') 
