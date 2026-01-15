@@ -198,12 +198,9 @@ def heatmap_gen_dist():
     chunks = np.array_split(inds, processes)
     padimg0 = make_padded_image(img0, [img_size + pad_up, img_size + pad_up,3])
 
-    
     mp.set_start_method("spawn", force=True)
     with mp.get_context("spawn").Pool(processes) as pool:
-        results = pool.starmap(worker, 
-                               [(chunks[i], padimg0) for i in range(processes)]
-        )
+        results = pool.starmap(worker, [(chunks[i], padimg0) for i in range(processes)])
     
     accumulated = defaultdict(float)
     # accumulate scores from across the results.     
@@ -212,7 +209,6 @@ def heatmap_gen_dist():
             accumulated[k_] += v_
 
     print('LEN accum ', len(accumulated))
-    # print(accumulated)
 
     heatmap = mapmaker(padimg0, accumulated, patch_size=128)
     
@@ -221,7 +217,6 @@ def heatmap_gen_dist():
     to_heatmap(output_dir, heatmap, name_ = 'torch_mp_heatmap')
     overlay_ = overlay_heatmap_simple(img0, heatmap, alpha=0.5)
     overlay_.save(os.path.join(output_dir, f"torch_mp_heatmap_overlay.png"))
-
 
 if __name__ =='__main__':
     heatmap_gen_dist()
