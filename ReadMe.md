@@ -1,6 +1,24 @@
 # Planning 
 The health care system uses coded short descriptions of visit, diagnosis, treatment. Coding minimizes the information stored, and makes the text normalized and searchable for large scale data systems. International Classification of Diseases (ICD) codes standardize the records. In the US, the CDC publishes codes anually. ICD databases are directories of codes, tables, descriptions, with pdfs, txt, xml files. It's a lot to dig through. Parsing the ICD documentation into searchable databases is advantageous for both automated and human in the loop systems. When someone is admitted to the hospital or a clinic, they have a cheif complaint. There's some medrecon, triage, and so on. Ultimately the doctor assigns a diagnosis that fits the observations and tests. A report has to be generated that has the diagnosis code, along with the procedure codes. Health insurance companies take the reports and check to see if the patient's policy covers everything. Because of the specificity of some of the codes, my guess is that some of these impact law enforcement, and legal procedings too.  
 
+
+
+moving to this layout 
+your-project/
+├── app/                    # Main application
+│   ├── ui.py
+│   ├── services/
+│   └── utils/             # Actual utilities (helpers, formatters, etc.)
+├── jobs/                   # Operational/scheduled tasks
+│   ├── icd_sync/          # Nightly ICD code database updates
+│   └── model_training/    # DL model training scripts
+├── models/                 # Trained model artifacts (optional)
+├── config/
+└── tests/
+
+
+
+
 This repo is just to explore some of the features that might be used in a clinical data information system. 
 ## layout
 ### top level
