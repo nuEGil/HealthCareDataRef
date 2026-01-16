@@ -61,6 +61,8 @@ It's in the run_app.sh but use this to kill threads on ports you know
 
 
 # TODO
+Polish the readme even further to make this super followable. 
+
 0. look into implementing encryption / hashing for requests. HIPAA compliance and privacy features.
 1. train a better model. right now model was trained with 1 layer added to resnet 50. would be better to unfreeze last conv layer - go fully convoltuional at run time. 
 2. Train a variant using Nt-xent loss under jobs/dltools/network.py
