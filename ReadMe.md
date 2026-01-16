@@ -1,8 +1,8 @@
 # HealthCareDataRef 
 ## Table of Contents
 
-- [Planning](#planning)
-- [TODO](#todo)
+- [Planning](#Planning)
+- [TODO](#TODO)
 - [Architecture Overview](#architecture-overview)
 - [Chest X-ray Database](#chest-x-ray-database)
 - [Medical Coding Systems](#medical-coding-systems)
@@ -65,14 +65,13 @@ It's in the run_app.sh but use this to kill threads on ports you know
 	kill $(sudo lsof -t -i :<PORT>)
 
 
-
-
-
 # TODO
 0. look into implementing encryption / hashing for requests. HIPAA compliance and privacy features.
 1. train a better model. right now model was trained with 1 layer added to resnet 50. would be better to unfreeze last conv layer - go fully convoltuional at run time. 
 2. Train a variant using Nt-xent loss under jobs/dltools/network.py
-2.
+
+
+3. Add buttons on the icd10 code search page so that you dont have to physically type "code [first 3 chars of code]" or  "terms [space separated search terms]"
 
 ## other notes
 ### jobs/dbsettools
