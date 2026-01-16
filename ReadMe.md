@@ -3,14 +3,9 @@
 
 - [Planning](#Planning)
 - [TODO](#TODO)
-- [Architecture Overview](#architecture-overview)
 - [Chest X-ray Database](#chest-x-ray-database)
 - [Medical Coding Systems](#medical-coding-systems)
 - [Database Search Tools](#database-search-tools)
-- [Deep Learning Pipelines](#deep-learning-pipelines)
-- [Data Ingestion & ETL Jobs](#data-ingestion--etl-jobs)
-- [Configuration](#configuration)
-- [Testing](#testing)
 - [Other Thoughts](#other-thoughts)
 
 
