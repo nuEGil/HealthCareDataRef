@@ -3,7 +3,6 @@ import sqlite3
 import uvicorn
 from pydantic import BaseModel 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
 
 '''fast api version of the ICD code look up
 consider adding a queue up front soo requensts dont bounce.
@@ -85,5 +84,5 @@ async def search(req: SearchRequest):
     return {"result": html}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run("app.services.icd10_dbsearch:app", host="127.0.0.1", port=8000)
     con.close()  # close the sonnection to the database.

@@ -68,7 +68,7 @@ Note -> Data Entry will have labels for every image in the set as far as I can t
 
 1. use this to kill threads on ports you know  - make a better run_app.sh. 
 	kill $(sudo lsof -t -i :<PORT>)
-
+	
 independant of the icd codes 
 2. implement image processing tools -- model server + at least 1 image feature computer in C. 
 3. implement signals processing tools. 

@@ -14,10 +14,10 @@ from PyQt6.QtWidgets import (
     QFileDialog, QGraphicsView, QGraphicsScene
     )
 
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtCore import Qt
-from services.fineTuneResNet import loadResNet50
-from services.refactor_analyze_img import mapmaker, make_padded_image, get_subimg_inds, overlay_heatmap_simple
+from PyQt6.QtGui import QImage, QPixmap,  QPainter
+from PyQt6.QtCore import Qt, QRectF
+
+from app.utils.model_serve_tools import mapmaker, make_padded_image, get_subimg_inds, overlay_heatmap_simple
 '''Add a togle for the different cases on search page
 search page should have 
 1. code 
@@ -136,60 +136,90 @@ class ImagePage(QWidget):
     # sendData = pyqtSignal(dict) # define a signal 
     def __init__(self):
         super().__init__()
+
         self.BASE_URL = "http://127.0.0.1:8002"
+        self.path = None
+
+        # ---- Graphics view ----
         self.scene = QGraphicsScene(self)
         self.view = QGraphicsView(self.scene, self)
-        self.view.setRenderHints(self.view.renderHints())
+        self.pixmap_item = None
 
-        self.pixmap_item = None  # keep a handle
+        # ---- Top: load image ----
+        load_btn = QPushButton("Load Image")
+        load_btn.clicked.connect(self.load_image)
 
-        btn = QPushButton("Load image")
-        btn.clicked.connect(self.load_image)
+        top_bar = QHBoxLayout()
+        top_bar.addWidget(load_btn)
+        top_bar.addStretch()
 
+        # ---- Bottom: analyze ----
+        analyze_btn = QPushButton("Analyze Image")
+        analyze_btn.clicked.connect(self.callImageAnalyze)
+        analyze_btn.setEnabled(False)
+        self.analyze_btn = analyze_btn  # enable after load
+
+        bottom_bar = QHBoxLayout()
+        bottom_bar.addStretch()
+        bottom_bar.addWidget(analyze_btn)
+
+        # ---- Main layout ----
         layout = QVBoxLayout(self)
-        layout.addWidget(self.view)
-        layout.addWidget(btn)
-
+        layout.addLayout(top_bar)
+        layout.addWidget(self.view, stretch=1)
+        layout.addLayout(bottom_bar)
+        
     def load_image(self):
-        self.path, _ = QFileDialog.getOpenFileName(
+        path, _ = QFileDialog.getOpenFileName(
             self,
-            "Select image",
+            "Select Image",
             "",
-            "Images (*.png *.jpg *.jpeg *.tif)"
+            "Images (*.png *.jpg *.jpeg *.tif *.bmp)"
         )
-        if not self.path:
+        if not path:
             return
-
-        pixmap = QPixmap(self.path)
-
+        
+        self.path = path
+        pixmap = QPixmap(path)
+        
+        if pixmap.isNull():
+            # Handle corrupted/invalid image
+            print(f"Failed to load image: {path}")
+            return
+        
+        # Clear previous image
         if self.pixmap_item:
             self.scene.removeItem(self.pixmap_item)
-
+        
+        # Add new image
         self.pixmap_item = self.scene.addPixmap(pixmap)
-        self.scene.setSceneRect(pixmap.rect())
+        self.scene.setSceneRect(QRectF(pixmap.rect()))
+        self.view.fitInView(self.scene.sceneRect(),Qt.AspectRatioMode.KeepAspectRatio)
+
+        self.analyze_btn.setEnabled(True)
 
     def callImageAnalyze(self):
-        self.display.clear()
+        self.analyze_btn.setEnabled(False) # turn off the button to avoid spamming
         endpoint = "/infer"
         payload = {"img_path": self.path}  
+        print(payload)
         response = requests.post(self.BASE_URL + endpoint, json=payload)
         
         if response.status_code != 200:
             return
         
-     
-        html_result = response.json().get("result")              
-        print(html_result)
-
+        # response is the json 
+        html_result = response.json().get("points", [])          
+        print(html_result[0])
+        # # need some logic for no points. .. mybe. 
         # refactor later ---
-        
         img0 = Image.open(self.path).convert("RGB")
         img0 = np.array(img0) / 255.0
     
         img_size = img0.shape[0]
         inds, pad_up = get_subimg_inds(img_size=img_size, stride=16)
         padimg0 = make_padded_image(img0, [img_size + pad_up, img_size + pad_up, 3])
-        heatmap = mapmaker(padimg0, html_result["points"], patch_size=128)
+        heatmap = mapmaker(padimg0, html_result, patch_size=128)
         overlay_ = overlay_heatmap_simple(img0, heatmap, alpha=0.5)
         over_pixmap = numpy_to_pixmap(np.array(overlay_))
 
@@ -198,9 +228,11 @@ class ImagePage(QWidget):
             self.scene.removeItem(self.pixmap_item)
 
         self.pixmap_item = self.scene.addPixmap(over_pixmap)
-        self.scene.setSceneRect(over_pixmap.rect())
-        self.view.fitInView(self.pixmap_item, Qt.AspectRatioMode.KeepAspectRatio)
+        self.scene.setSceneRect(QRectF(over_pixmap.rect()))
+        self.view.fitInView(self.scene.sceneRect(),Qt.AspectRatioMode.KeepAspectRatio)
 
+        self.analyze_btn.setEnabled(True)
+       
 class TabbedApp(QMainWindow):
     def __init__(self,):
         super().__init__()

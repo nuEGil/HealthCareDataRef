@@ -1,25 +1,23 @@
-import os
-import uvicorn
-from pydantic import BaseModel 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
-from PIL import Image
-import numpy as np
 import time
-
-import torch
-import torch.multiprocessing as mp
+import uvicorn
+import numpy as np
+from PIL import Image
 from collections import defaultdict
 
+# fast api stuff
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
-# look into the import thing. i know __init__.py has to be there.. might be missing something. for now import from same dir
-from fineTuneResNet import loadResNet50
-# rememebr - here we just want to return the point list in the api response
-from refactor_analyze_img import get_subimg_inds, patch_generator, make_padded_image, model_runner
+
+# torch
+import torch.multiprocessing as mp
+
+from app.utils.model_serve_tools import get_subimg_inds, make_padded_image, model_runner
 
 # could inherit from class model_runner. but there's some extra changes i want to make 
 
 '''
+run from the top level with  python -m app.services.image_model_server
+
 need to add in a request blocker till the processes are up, and then a blocker while the models are running, like a queue
 
 try out the service 
@@ -92,5 +90,5 @@ def infer(req: dict):
 
 if __name__ == "__main__":
     # things to do before running the application. 
-    uvicorn.run(app, host="127.0.0.1", port=8002)
+    uvicorn.run("app.services.image_model_server:app", host="127.0.0.1", port=8002)
     
