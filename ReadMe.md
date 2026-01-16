@@ -1,35 +1,81 @@
+# HealthCareDataRef 
+## Table of Contents
+
+- [Planning](#planning)
+- [TODO](#todo)
+- [Architecture Overview](#architecture-overview)
+- [Chest X-ray Database](#chest-x-ray-database)
+- [Medical Coding Systems](#medical-coding-systems)
+- [Database Search Tools](#database-search-tools)
+- [Deep Learning Pipelines](#deep-learning-pipelines)
+- [Data Ingestion & ETL Jobs](#data-ingestion--etl-jobs)
+- [Configuration](#configuration)
+- [Testing](#testing)
+- [Other Thoughts](#other-thoughts)
+
+
 # Planning 
 The health care system uses coded short descriptions of visit, diagnosis, treatment. Coding minimizes the information stored, and makes the text normalized and searchable for large scale data systems. International Classification of Diseases (ICD) codes standardize the records. In the US, the CDC publishes codes anually. ICD databases are directories of codes, tables, descriptions, with pdfs, txt, xml files. It's a lot to dig through. Parsing the ICD documentation into searchable databases is advantageous for both automated and human in the loop systems. When someone is admitted to the hospital or a clinic, they have a cheif complaint. There's some medrecon, triage, and so on. Ultimately the doctor assigns a diagnosis that fits the observations and tests. A report has to be generated that has the diagnosis code, along with the procedure codes. Health insurance companies take the reports and check to see if the patient's policy covers everything. Because of the specificity of some of the codes, my guess is that some of these impact law enforcement, and legal procedings too.  
 
-
-
-moving to this layout 
-your-project/
-├── app/                    # Main application
-│   ├── ui.py
-│   ├── services/
-│   └── utils/             # Actual utilities (helpers, formatters, etc.)
-├── jobs/                   # Operational/scheduled tasks
-│   ├── icd_sync/          # Nightly ICD code database updates
-│   └── model_training/    # DL model training scripts
-├── models/                 # Trained model artifacts (optional)
-├── config/
-└── tests/
-
-
-
-
 This repo is just to explore some of the features that might be used in a clinical data information system. 
-## layout
-### top level
-1. requirements.txt: lists all requirements needed to run the application. 
-2. run_app.sh: bash script to run services in parallel with the UI. Currently it's only locally hosted
-3. UI.py: user interface built with PyQt6. Could swap it for a web page front end (HTML+CSS+JS) or with a cross platform front end built in MAUI. 
-4. services : contains all services. in this case I use FastAPI servers to run backend logic and algorithms. could replace these with flask, java, rust, whatever would give better app performance. this is a demo though. Services should be always running so users can access them with the UI or with API calls. 
-5. Utilities: These are things that can be run once, nightly, or just not always on 
+## Repo map
+```text
+HealthCareDataRef/
+├── app/
+│   ├── ui.py                         # PyQt6 desktop UI entrypoint
+│   ├── run_app.sh                    # Orchestrates local services + UI startup
+│   ├── services/
+│   │   ├── icd10_dbsearch.py          # ICD-10 query service
+│   │   ├── image_model_server.py      # CV model inference service
+│   │   └── knowledge_store_search.py  # Knowledge-base search API
+│   └── utils/
+│       └── model_serve_tools.py       # Post-inference utilities (heatmaps, aggregation)
+│
+├── jobs/
+│   ├── dbsettools/                      # Database ingestion & enrichment jobs
+│   │   ├── parse_icd10.py             # Parse official ICD-10 releases
+│   │   ├── parse_mimic.py             # Parse MIMIC clinical dataset
+│   │   ├── save_wikipedia_pages.py    # Fetch & cache Wikipedia source pages
+│   │   ├── movestuff.sh               # Atomic promote of staged Wikipedia data
+│   │   ├── entrypoint.sh              # Defines execution order for DB jobs
+│   │   └── parse_wikipedia_pages.py   # Extract structured medical entities
+│   │
+│   └── dltools/                      # Deep-learning training workflows
+│       ├── chestxray8/               # ChestXray-8 CV training & analysis
+│       │   ├── BaseDataManager.py     # Dataset indexing, splits, metadata I/O
+│       │   ├── network.py             # Model definitions (ResNet, heads)
+│       │   ├── fineTuneResNet.py      # Supervised + transfer-learning training
+│       │   ├── analyze_img.py         # Patch-level inference & visualization
+│       │   ├── refactor_analyze_img.py# Refactored inference pipeline (WIP)
+│       │   ├── Patch_maker.py         # Patch extraction & coordinate mapping
+│       │   ├── patch_gen_thought.py   # Design notes on patch strategy
+│       │   └── note.txt               # Experiment notes & observations
+│       │
+│       ├── gpt2_keywords/             # (Planned) LLM fine-tuning for keyword generation
+│       └── chemistry_models/          # (Planned) Molecular / structure learning
+│
+├── models/                           # Trained model artifacts (local / cached)
+├── config/                           # Environment & runtime configuration
+├── tests/                            # Unit & integration tests
+├── requirements_torch.txt            # pip install requirements for the enviornment
+└── README.md
+```
+It's in the run_app.sh but use this to kill threads on ports you know  
 
-### utilities
-### utilities/dbsettools
+	kill $(sudo lsof -t -i :<PORT>)
+
+
+
+
+
+# TODO
+0. look into implementing encryption / hashing for requests. HIPAA compliance and privacy features.
+1. train a better model. right now model was trained with 1 layer added to resnet 50. would be better to unfreeze last conv layer - go fully convoltuional at run time. 
+2. Train a variant using Nt-xent loss under jobs/dltools/network.py
+2.
+
+## other notes
+### jobs/dbsettools
 1. parseMimic.py: reads data from MIMIC IV demo version available on physionet. it's covered in their data use policy. all the records are anonymized and suitable for use in demos like this. 
 2. parseICD10.py: reads ICD10 order text file and populates an sqlite database. 
 3. save_wikipidia_pages.py: check documentation on google custom search engine and search api. This script reads the ICD10 db, then uses the condition names in that database as part of google searches. the google search api yields a json with links from their search engine. it's limited to 100 requests per day on the free tier. The script then uses the wikipedia REST api to save the wikipedia html given the page found in the google search. so this script will save the search result json and the wikipedia page html. -- note, text on wikipedia is under a creative commons liscence. 
@@ -38,7 +84,8 @@ This repo is just to explore some of the features that might be used in a clinic
 
 Google search api: 100 request/day limit
 Wikipedia REST API: no more than 200 requests/s
-### utilities/misc
+
+### jobs/misc
 this was for experimentation with some of the apis. originally started using the huggingface llm api. Gemini genai api is cheap enough. so they only charge a few cents for every 1M tokens. Becareful with this, token counts include both your input and the model generation. Crime and Pubishment by dostoevsky is like 1.5M words so like 250k+ tokens.. need to check datasheet for the num of chars in a token - usually 3-4 though. Google GenAI API has a function for token counts. 
 
 Scalability? don't let your users just genrate a ton of text. use nightly runs and databases to get more use out of the API. In gemini_caller.py I have a prompt for generating key words form laymans terms. I also constrain the generator to 200 tokens per request. Could add the gemini calls to the wikipedia page saver, so that the sql database has a second set of keywords
@@ -51,27 +98,17 @@ GoogleGenAI API : 20 requests per day (varies by model) + n cents for every 1Mil
 
 A way to think about this --> the entirety of wikipedia is more bytes than the number of bytes of a large language model... model serving vs website hosting -> website hosting is just serving small pages. Model serving is coordination of large clusters of GPUs. Model can be used for things like doc sumarization (many to 1) and key word generation (1 to many / many to many). But again, if you can just store the key terms generated by the model, then you dont have to call the model everytime a request is made. you call the database. 
 
-
-### utilities/dltools/chest_xray8
+### jobs/dltools/chest_xray8
 1. BaseDataManager.py : script to sub sample training batches from the main spreadsheet files. 
 
 Note -> Data Entry will have labels for every image in the set as far as I can tell. But it doesnt have bounding boxes for every image in the set. This means if you try to join train_val_list or test_list with the other provided csv files, the data won't always survive the filter... so you have to make your own train, test, val split if you want to include all the classes in your evaluation. 
 
-### services
+### app/services/
 1. icd10_dbsearch.py: given an http request it searches the icd10 database and returns the entry --> code, name, short description, long description -- user can enter text, but the database only has the medical term, not layman's terms. For example "ear infection" wont return anything. You need to search otitis.
 
 2. knowledge_store_search.py: Search using any keyword. Searches the Keywords gnerated with TFIDF during the wikipedia page parsing. 
 
-# TODO
-0. look into implementing encryption / hashing for requests. HIPAA compliance and privacy features.
-
-
-1. use this to kill threads on ports you know  - make a better run_app.sh. 
-	kill $(sudo lsof -t -i :<PORT>)
-	
-independant of the icd codes 
-2. implement image processing tools -- model server + at least 1 image feature computer in C. 
-3. implement signals processing tools. 
+3. image_model_server.py : assumes server has a copy of the image the user has. so path request in a real situation would take the cloud platform path to the file and return the points list. 
 
 
 
