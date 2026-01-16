@@ -3,13 +3,21 @@ import sys
 import json
 import sqlite3
 import requests
+import numpy as np
+from PIL import Image
+from PIL.ImageQt import fromqimage
 
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QTextBrowser, 
     QHBoxLayout, QTextEdit, QPushButton, QLabel, 
     QSizePolicy, QSpinBox, QMainWindow, QTabWidget,  
+    QFileDialog, QGraphicsView, QGraphicsScene
     )
 
+from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtCore import Qt
+from services.fineTuneResNet import loadResNet50
+from services.refactor_analyze_img import mapmaker, make_padded_image, get_subimg_inds, overlay_heatmap_simple
 '''Add a togle for the different cases on search page
 search page should have 
 1. code 
@@ -110,6 +118,89 @@ class KnowledgePage(QWidget):
             html_result = response.json().get("result")              
             self.display.append(html_result)
 
+def numpy_to_pixmap(array):
+    # 1. Ensure array is uint8 and in RGB format (not BGR)
+    if array.dtype != np.uint8:
+        array = array.astype(np.uint8)
+        
+    height, width, channels = array.shape
+    bytes_per_line = channels * width
+    
+    # 2. Create QImage (specifying format is critical)
+    q_img = QImage(array.data, width, height, bytes_per_line, QImage.Format.Format_RGB888)
+    
+    # 3. Convert to QPixmap
+    return QPixmap.fromImage(q_img)
+
+class ImagePage(QWidget):
+    # sendData = pyqtSignal(dict) # define a signal 
+    def __init__(self):
+        super().__init__()
+        self.BASE_URL = "http://127.0.0.1:8002"
+        self.scene = QGraphicsScene(self)
+        self.view = QGraphicsView(self.scene, self)
+        self.view.setRenderHints(self.view.renderHints())
+
+        self.pixmap_item = None  # keep a handle
+
+        btn = QPushButton("Load image")
+        btn.clicked.connect(self.load_image)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.view)
+        layout.addWidget(btn)
+
+    def load_image(self):
+        self.path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select image",
+            "",
+            "Images (*.png *.jpg *.jpeg *.tif)"
+        )
+        if not self.path:
+            return
+
+        pixmap = QPixmap(self.path)
+
+        if self.pixmap_item:
+            self.scene.removeItem(self.pixmap_item)
+
+        self.pixmap_item = self.scene.addPixmap(pixmap)
+        self.scene.setSceneRect(pixmap.rect())
+
+    def callImageAnalyze(self):
+        self.display.clear()
+        endpoint = "/infer"
+        payload = {"img_path": self.path}  
+        response = requests.post(self.BASE_URL + endpoint, json=payload)
+        
+        if response.status_code != 200:
+            return
+        
+     
+        html_result = response.json().get("result")              
+        print(html_result)
+
+        # refactor later ---
+        
+        img0 = Image.open(self.path).convert("RGB")
+        img0 = np.array(img0) / 255.0
+    
+        img_size = img0.shape[0]
+        inds, pad_up = get_subimg_inds(img_size=img_size, stride=16)
+        padimg0 = make_padded_image(img0, [img_size + pad_up, img_size + pad_up, 3])
+        heatmap = mapmaker(padimg0, html_result["points"], patch_size=128)
+        overlay_ = overlay_heatmap_simple(img0, heatmap, alpha=0.5)
+        over_pixmap = numpy_to_pixmap(np.array(overlay_))
+
+        # --- update scene ---
+        if self.pixmap_item:
+            self.scene.removeItem(self.pixmap_item)
+
+        self.pixmap_item = self.scene.addPixmap(over_pixmap)
+        self.scene.setSceneRect(over_pixmap.rect())
+        self.view.fitInView(self.pixmap_item, Qt.AspectRatioMode.KeepAspectRatio)
+
 class TabbedApp(QMainWindow):
     def __init__(self,):
         super().__init__()
@@ -126,6 +217,10 @@ class TabbedApp(QMainWindow):
         self.page2 = KnowledgePage() 
         tabs.addTab(self.page2, "Knowledge Page")
         
+
+        self.page3 = ImagePage() 
+        tabs.addTab(self.page3, "Image Page")
+
         # # connect to sent signals 
         # self.page1.sendData.connect(self.page2.receiveData)
 
