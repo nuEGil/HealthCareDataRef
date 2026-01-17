@@ -324,8 +324,8 @@ def startSQLLiteDB():
     # run any number of times. 
     builder.getFindingCounts()
     builder.getTagCouts() 
-    builder.getSubsetData(tag='Mass') 
-    builder.getSubsetData(tag='No Finding')
+    builder.getSubsetData(tag='Infiltrate') 
+    # builder.getSubsetData(tag='No Finding')
      
     # always run
     builder.clean_up()   
