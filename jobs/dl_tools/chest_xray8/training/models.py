@@ -129,11 +129,53 @@ def loadResNet50(num_classes):
 
     return model, weights.transforms()
 
-def loadResNet50_unfreeze(num_classes):
-    weights = ResNet50_Weights.DEFAULT
-    model = resnet50(weights=weights)
+class ResNet50WithHead(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+        # print shows the order of definition here - not the order of execution inforward. 
+        weights = ResNet50_Weights.DEFAULT
+        base = resnet50(weights=weights)
+        self.transforms = weights.transforms()
 
-    # replace final FC
-    in_feats = model.fc.in_features
-    model.fc = nn.Linear(in_feats, num_classes)
-    return model, weights.transforms()
+        self.layer4 = base.layer4
+
+        self.backbone = nn.Sequential(
+            base.conv1, base.bn1, base.relu, base.maxpool,
+            base.layer1, base.layer2, base.layer3,
+            self.layer4,
+        )
+
+        # 2048 → 1 channel
+        self.conv_head = nn.Conv2d(2048, 1, kernel_size=1) # channel is supervised by new labels. 
+
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(1, num_classes)
+
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.conv_head(x)   # [B, 1, H, W]
+        x = self.avgpool(x)
+        x = x.flatten(1)
+        return self.fc(x)
+
+def loadResNet50_unfreeze(num_classes):
+    model = ResNet50WithHead(num_classes)
+
+    # freeze all
+    for p in model.parameters():
+        p.requires_grad = False
+
+    # unfreeze last conv block
+    for p in model.layer4.parameters():
+        p.requires_grad = True
+
+    # unfreeze head
+    for p in model.conv_head.parameters():
+        p.requires_grad = True
+
+    for p in model.fc.parameters():
+        p.requires_grad = True
+
+    return model, model.transforms
+
+

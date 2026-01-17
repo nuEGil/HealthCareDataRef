@@ -38,6 +38,19 @@ class simCLRLoader():
     def shuffle(self):
         np.random.shuffle(self.paths)
 
+AUG_OPS = {
+    "none":   lambda img: img,
+    "fliplr": lambda img: img.transpose(Image.FLIP_LEFT_RIGHT),
+    "flipud": lambda img: img.transpose(Image.FLIP_TOP_BOTTOM),
+    "rot90":  lambda img: img.transpose(Image.ROTATE_90),
+    "rot180": lambda img: img.transpose(Image.ROTATE_180),
+    "rot270": lambda img: img.transpose(Image.ROTATE_270),
+}
+
+def random_aug0(img: Image.Image) -> Image.Image:
+    aug = np.random.choice(list(AUG_OPS))
+    return AUG_OPS[aug](img)
+
 class ClassifierLoader():
     def __init__(self, device, csv_name, batch_size = 5):
         self.batch_size = batch_size
@@ -67,6 +80,7 @@ class ClassifierLoader():
                 .convert("RGB")
                 .resize(self.target_size, Image.BILINEAR)
             )
+            img = random_aug0(img)
             img = np.array(img) / 255.0
 
             lab = int(subrow[2])   # 0 or 1

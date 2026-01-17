@@ -6,4 +6,5 @@ python jobs/dl_tools/chest_xray8/training/task.py \
 --n_classes 4 \
 --learning_rate 0.001 \
 --batch_size 32 \
---epochs 1
+--epochs 10
+

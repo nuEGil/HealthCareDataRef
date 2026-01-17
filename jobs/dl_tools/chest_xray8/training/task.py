@@ -103,7 +103,7 @@ class Trainer():
         self.train_Loader.shuffle()
         NN = self.train_Loader.NN
          
-        for sub in range(0, self.train_Loader.paths.shape[0]-self.batch_size, self.batch_size):
+        for si, sub in enumerate(range(0, self.train_Loader.paths.shape[0]-self.batch_size, self.batch_size)):
             # sample a batch of data 
             X, Y_true = self.train_Loader.load_samples(id=sub)
             X = self.preprocess(X) # preprocess should happen in the dataloader  
@@ -114,9 +114,13 @@ class Trainer():
             loss.backward()
             self.optimizer.step()
             total_loss += loss.item()
-            print('sub loss : ', total_loss)
+            print(
+                    f"\rbatch {si+1:4d}/{NN:4d} | loss_item: {loss.item():.4f}     ",
+                    end="",
+                    flush=True
+                )
 
-        print(f"Epoch [{steps+1}/{self.epochs}], Train Loss: {total_loss/NN:.4f}")
+        print(f"\nEpoch [{steps+1}/{self.epochs}], Train Loss: {total_loss/NN:.4f}")
         # print(f'steps: {steps}/{N_steps}, training loss: ', loss.item())
         self.log_file_.training_step.append(steps)
         self.log_file_.training_loss.append(total_loss/NN)
@@ -126,7 +130,7 @@ class Trainer():
         total_loss = 0
         NN = self.test_Loader.NN
          
-        for sub in range(0, self.test_Loader.paths.shape[0] - self.batch_size, self.batch_size):
+        for si, sub in enumerate(range(0, self.test_Loader.paths.shape[0] - self.batch_size, self.batch_size)):
             # sample a batch of data 
             X, Y_true = self.test_Loader.load_samples(id=sub)
             X = self.preprocess(X) # preprocess should happen in the dataloader  
@@ -134,8 +138,13 @@ class Trainer():
             loss = self.lossf(y_pred, Y_true)
             total_loss += loss.item()
             # no gradient step or anything like that. 
+            print(
+                    f"\rbatch {si+1:4d}/{NN:4d} | loss_item: {loss.item():.4f}     ",
+                    end="",
+                    flush=True
+                )
 
-        print(f"Epoch [{steps+1}/{self.epochs}], Test Loss: {total_loss/NN:.4f}")
+        print(f"\nEpoch [{steps+1}/{self.epochs}], Test Loss: {total_loss/NN:.4f}")
         # print(f'steps: {steps}/{N_steps}, training loss: ', loss.item())
         self.log_file_.testing_step.append(steps)
         self.log_file_.testing_loss.append(total_loss/NN)   
