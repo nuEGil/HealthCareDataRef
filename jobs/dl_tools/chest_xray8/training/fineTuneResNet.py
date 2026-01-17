@@ -34,6 +34,9 @@ optimizations. for loading data as quickly as possible.
 
 need augmentation policies. 
 
+there is a pretrained resnet available check documentation at 
+https://docs.pytorch.org/vision/main/models.html
+
 '''
 def manageArgs():
     parser = argparse.ArgumentParser(description="train a model")
