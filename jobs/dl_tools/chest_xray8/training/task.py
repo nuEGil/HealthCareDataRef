@@ -9,7 +9,7 @@ import argparse
 from dataclasses import dataclass, field
 
 from data_loaders import ClassifierLoader
-from models import loadResNet50_unfreeze
+from models import loadResNet50_unfreeze, loadBlockStack
 
 def manageArgs():
     parser = argparse.ArgumentParser(description="train a model")
@@ -83,7 +83,12 @@ class Trainer():
         self.test_Loader = ClassifierLoader(self.device, csv_name_test, batch_size=batch_size)
 
         # load the model
-        model, self.preprocess = loadResNet50_unfreeze(n_classes)
+        # model, self.preprocess = loadResNet50_unfreeze(n_classes)
+        model, self.preprocess = loadBlockStack(n_classes)
+        if hasattr(model,'hyper_params_0'):
+            with open(os.path.join(self.odir, "hyper_params.json"), "w") as f:
+                json.dump(model.hyper_params_0, f, indent=2)
+                
         model = model.to(self.device)
         model.train()
         # print a copy of the model.
@@ -93,7 +98,10 @@ class Trainer():
 
         # optimizer and loss
         self.optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-        self.lossf = nn.CrossEntropyLoss()
+        # self.lossf = nn.CrossEntropyLoss()
+        loss_weights =  torch.tensor([0.2, 1.0, 1.0, 1.0], device=self.device) # background is more prevelant than anything else
+        loss_weights= loss_weights / loss_weights.mean()
+        self.lossf = nn.CrossEntropyLoss(weight=loss_weights)
 
         # log file and tags. 
         self.log_file_ = log_file()
