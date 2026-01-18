@@ -87,7 +87,7 @@ class model_runner():
         # this should be the same across models. 
         self.patch_size = 128
         self.c = self.patch_size // 2
-        self.thr = 0.8 # set this in the model class init
+        self.thr = 0.95 # set this in the model class init
 
     def process_img(self, img0, offset_x=0, offset_y=0, batch_size=32):
         # now batching images
@@ -333,7 +333,7 @@ def heatmap_gen_dist():
     img0 = np.array(img0) / 255.0
     
     img_size = img0.shape[0]
-    inds, pad_up  = get_subimg_inds(img_size = img_size, stride = 32)
+    inds, pad_up  = get_subimg_inds(img_size = img_size, stride = 64)
 
     print('number of large image reps, bbox ',inds.shape)
     # this one already distributes the chunks pretty well
