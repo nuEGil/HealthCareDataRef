@@ -192,15 +192,21 @@ class ResNet50WithHead(nn.Module):
         # Now we have 8×8 = 64 features instead of 4×4 = 16
         self.fc = nn.Linear(64, num_classes)
         self.drop = nn.Dropout(0.5)
+
+        self.deploy_ = False
     
     def forward(self, x):
         x = self.backbone(x)
         x = self.conv_head(x)      # [B, 1, 4, 4]
-        x = self.upsample(x)       # [B, 1, 8, 8]
-        x = self.flat(x)           # [B, 64]
-        x = self.drop(x)
-        x = self.fc(x)             # [B, num_classes]
-        return x
+        upsamp = self.upsample(x)       # [B, 1, 8, 8]
+        out = self.flat(upsamp)           # [B, 64]
+        out = self.drop(out)
+        out = self.fc(out)             # [B, num_classes]
+        
+        if self.deploy_:
+            return out, upsamp
+        else:
+            return out
 
 def loadResNet50_unfreeze(num_classes):
     model = ResNet50WithHead(num_classes)
