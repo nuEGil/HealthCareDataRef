@@ -203,4 +203,20 @@ def loadResNet50_unfreeze(num_classes):
 
     return model, model.transforms
 
+def loadResNet50_add_convhead(num_classes):
+    model = ResNet50WithHead(num_classes)
+
+    # freeze all
+    for p in model.parameters():
+        p.requires_grad = False
+
+    # unfreeze head
+    for p in model.conv_head.parameters():
+        p.requires_grad = True
+
+    for p in model.fc.parameters():
+        p.requires_grad = True
+
+    return model, model.transforms
+
 

@@ -9,7 +9,7 @@ import argparse
 from dataclasses import dataclass, field
 
 from data_loaders import ClassifierLoader
-from models import loadResNet50_unfreeze, loadBlockStack
+from models import loadResNet50_unfreeze, loadBlockStack, loadResNet50_add_convhead
 
 def manageArgs():
     parser = argparse.ArgumentParser(description="train a model")
@@ -84,7 +84,8 @@ class Trainer():
 
         # load the model
         # model, self.preprocess = loadResNet50_unfreeze(n_classes)
-        model, self.preprocess = loadBlockStack(n_classes)
+        # model, self.preprocess = loadBlockStack(n_classes)
+        model, self.preprocess = loadResNet50_add_convhead(n_classes)
         if hasattr(model,'hyper_params_0'):
             with open(os.path.join(self.odir, "hyper_params.json"), "w") as f:
                 json.dump(model.hyper_params_0, f, indent=2)
