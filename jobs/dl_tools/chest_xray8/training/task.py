@@ -11,6 +11,10 @@ from dataclasses import dataclass, field
 from data_loaders import ClassifierLoader, BinClassifierLoader
 from models import loadResNet50_unfreeze, loadBlockStack, loadResNet50_add_convhead
 
+'''
+add a registry for model ty, losss type, etc. 
+'''
+
 def manageArgs():
     parser = argparse.ArgumentParser(description="train a model")
     
