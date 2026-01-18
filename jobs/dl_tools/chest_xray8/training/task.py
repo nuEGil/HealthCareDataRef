@@ -224,7 +224,6 @@ if __name__ == '__main__':
                         model_type = xargs.model_type)
     
     mod_train.classifier_training()
-
     ## Use this to make a case for general n-classes instead of binary. 
     # self.train_Loader = ClassifierLoader(self.device, csv_name_train, batch_size=batch_size)
     # self.test_Loader = ClassifierLoader(self.device, csv_name_test, batch_size=batch_size)
