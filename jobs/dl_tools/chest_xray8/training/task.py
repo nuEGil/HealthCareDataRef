@@ -13,14 +13,29 @@ from models import loadResNet50_unfreeze, loadBlockStack, loadResNet50_add_convh
 
 '''
 add a registry for model ty, losss type, etc. 
+Y_true.unsqueeze(1) is unique to the 
+add metrics later. 
+add parsing for training set file path. 
+
+for BCE loss -- ~0.6 is about random. ~0.1 is a decent model. ~0.05 strong, confident model. 
 '''
+# this is adictionary for now. use the arjan codes pattern so you only have to register the thing you use
+model_reg = {'ResNet50_unf':loadResNet50_unfreeze,
+             'BlockStack':loadBlockStack,
+             'ResNet50_add_c_head':loadResNet50_add_convhead}
 
 def manageArgs():
     parser = argparse.ArgumentParser(description="train a model")
     
     parser.add_argument("--tag", type=str, required=True, help="model tag")
-    parser.add_argument("--data_set_dir", type=str, required=True, help="directory with train test csv \
+    
+    parser.add_argument("--data_set_dir", type=str, required=True, 
+                        help="directory with train test csv \
                         - just the name. have path management to patch_set from base image dir")
+    
+    parser.add_argument("--model_type", type=str, required=True, 
+                        help="available options\nResNet50_unf\nBlockStack\nResNet50_add_c_head")
+    
     parser.add_argument("--n_classes", type=int, default=2, help="number of classes")
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="learning rate")
     parser.add_argument("--batch_size", type=int, default=10, help="Batch Size")
@@ -28,6 +43,7 @@ def manageArgs():
 
     args = parser.parse_args()
     assert args.learning_rate > 0, "learning_rate must be > 0"
+    assert args.model_type in model_reg.keys(), "model type not in model registry. print help for more info."
     return args
 
 @dataclass
@@ -57,39 +73,41 @@ class log_file():
                 writer.writerow([s, l])
 
 class Trainer():
-    def __init__(self, n_classes=2, batch_size = 50, learning_rate = 1e-3, epochs = 100, tag = 'v0', data_set_dir='' ):
+    def __init__(self, n_classes=2, batch_size = 50, 
+                 learning_rate = 1e-3, epochs = 100, tag = 'v0', 
+                 data_set_dir='',
+                 model_type ='' ):
         self.tag = tag
         # set the device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"------ Using device: {self.device} ------")
         
         # output directory 
-        self.odir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/pytorch_resnet_{tag}')
+        self.odir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/{model_type}_{tag}')
         if not os.path.exists(self.odir):
             os.makedirs(self.odir)
         
         # check this before running training. I want to make sure that the hyperparameters for the model are saved. 
         params = {'n_classes':n_classes, 'batch_size':batch_size, 
                   'learning_rate':learning_rate, 'epochs':epochs, 
-                  'tag':tag, 'data_set_dir':data_set_dir}
+                  'tag':tag, 'data_set_dir':data_set_dir,
+                  'model_type':model_type}
         
         with open(os.path.join(self.odir, "args.json"), "w") as f:
             json.dump(params, f, indent=2)
 
         # load training and testing data files
         dir_ = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/patch_sets/{data_set_dir}')
-        csv_name_train = os.path.join(dir_, 'train_set.csv')
-        csv_name_test = os.path.join(dir_, 'test_set.csv')
+        csv_name_train = os.path.join(dir_, 'mass_train_set.csv')
+        csv_name_test = os.path.join(dir_, 'mass_test_set.csv')
 
         # intanciate the Loader classes
         self.batch_size = batch_size # arg
-        # self.train_Loader = ClassifierLoader(self.device, csv_name_train, batch_size=batch_size)
-        # self.test_Loader = ClassifierLoader(self.device, csv_name_test, batch_size=batch_size)
         self.train_Loader = BinClassifierLoader(self.device, csv_name_train, batch_size=batch_size)
         self.test_Loader = BinClassifierLoader(self.device, csv_name_test, batch_size=batch_size)
 
         # load the model
-        model, self.preprocess = loadResNet50_add_convhead(n_classes)
+        model, self.preprocess = model_reg[model_type](n_classes)
         if hasattr(model,'hyper_params_0'):
             with open(os.path.join(self.odir, "hyper_params.json"), "w") as f:
                 json.dump(model.hyper_params_0, f, indent=2)
@@ -103,13 +121,10 @@ class Trainer():
 
         # optimizer and loss
         self.optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-        # self.lossf = nn.CrossEntropyLoss()
-        # loss_weights =  torch.tensor([0.2, 1.0, 1.0, 1.0], device=self.device) # background is more prevelant than anything else
-        # loss_weights= loss_weights / loss_weights.mean()
-        # self.lossf = nn.CrossEntropyLoss(weight=loss_weights)
+        #BCE loss needs sigmoid activation -- regular cross entropy takes logits. 
         self.sigm = nn.Sigmoid()
         self.lossf = nn.BCELoss()
-
+        
         # log file and tags. 
         self.log_file_ = log_file()
         
@@ -125,7 +140,7 @@ class Trainer():
             y_pred = self.model(X)
             y_pred = self.sigm(y_pred)
             
-            loss = self.lossf(y_pred, Y_true.unsqueeze(1))
+            loss = self.lossf(y_pred, Y_true.unsqueeze(1)) # unsqueeze step unique to BCEloss
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -136,8 +151,8 @@ class Trainer():
                     end="",
                     flush=True
                 )
-
-        print(f"\nEpoch [{steps+1}/{self.epochs}], Train Loss: {total_loss/NN:.4f}")
+        print("\r" + " " * 80 + "\r", end="")  # clear current line
+        print(f"Epoch [{steps+1}/{self.epochs}], Train Loss: {total_loss/NN:.4f}")
         # print(f'steps: {steps}/{N_steps}, training loss: ', loss.item())
         self.log_file_.training_step.append(steps)
         self.log_file_.training_loss.append(total_loss/NN)
@@ -154,7 +169,7 @@ class Trainer():
             y_pred = self.model(X)
             y_pred = self.sigm(y_pred)
             
-            loss = self.lossf(y_pred, Y_true.unsqueeze(1))
+            loss = self.lossf(y_pred, Y_true.unsqueeze(1)) # unsqueeze step unique to bce loss
             total_loss += loss.item()
             # no gradient step or anything like that. 
             print(
@@ -187,13 +202,22 @@ class Trainer():
             if steps%5 == 0: 
                 self.test_model(steps)
 
-
 if __name__ == '__main__':
     xargs = manageArgs()
-    mod_train = Trainer(n_classes=xargs.n_classes,
+    
+    mod_train = Trainer(n_classes = xargs.n_classes,
                         batch_size = xargs.batch_size, 
                         learning_rate = xargs.learning_rate,
                         epochs = xargs.epochs, tag = xargs.tag,
-                        data_set_dir=xargs.data_set_dir )
+                        data_set_dir = xargs.data_set_dir,
+                        model_type = xargs.model_type)
     
     mod_train.classifier_training()
+
+    ## Use this to make a case for general n-classes instead of binary. 
+    # self.train_Loader = ClassifierLoader(self.device, csv_name_train, batch_size=batch_size)
+    # self.test_Loader = ClassifierLoader(self.device, csv_name_test, batch_size=batch_size)
+    # self.lossf = nn.CrossEntropyLoss()
+    # loss_weights =  torch.tensor([0.2, 1.0, 1.0, 1.0], device=self.device) # background is more prevelant than anything else
+    # loss_weights= loss_weights / loss_weights.mean()
+    # self.lossf = nn.CrossEntropyLoss(weight=loss_weights)

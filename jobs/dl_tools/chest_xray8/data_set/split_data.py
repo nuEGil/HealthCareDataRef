@@ -62,13 +62,13 @@ def split_data(set_= 'mass1'):
     test_df  = pd.concat(test_rows)
 
     #Take all non background patches to be positive label, background is neg
-    # will still have an imbalance. 
-    train_pos = train_df[train_df.label != 0]
+    # will still have an imbalance.  -- change back to !=0 for all labels. 
+    train_pos = train_df[train_df.label == 3]
     train_neg = train_df[train_df.label == 0].sample(
         n=len(train_pos), random_state=42
     )
 
-    test_pos = test_df[test_df.label != 0]
+    test_pos = test_df[test_df.label == 3 ]
     test_neg = test_df[test_df.label == 0].sample(
         n=len(test_pos), random_state=42
     )
@@ -76,8 +76,8 @@ def split_data(set_= 'mass1'):
     train_df = pd.concat([train_pos, train_pos, train_neg]).sample(frac=1, random_state=42)
     test_df  = pd.concat([test_pos, test_neg]).sample(frac=1, random_state=42)
 
-    train_df.to_csv(os.path.join(outpath, "train_set.csv"))
-    test_df.to_csv(os.path.join(outpath, "test_set.csv"))
+    train_df.to_csv(os.path.join(outpath, "mass_train_set.csv"))
+    test_df.to_csv(os.path.join(outpath, "mass_test_set.csv"))
 
     assert set(train_df.image_ind).isdisjoint(test_df.image_ind)
 
@@ -87,5 +87,5 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument("--i", type=int, required=False)
     args = p.parse_args()
-    organize_patch_paths(set_= 'NoF_Eff_Inf_Mas')
+    # organize_patch_paths(set_= 'NoF_Eff_Inf_Mas')
     split_data(set_ = 'NoF_Eff_Inf_Mas')
