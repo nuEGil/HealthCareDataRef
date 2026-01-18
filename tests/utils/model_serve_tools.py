@@ -1,46 +1,11 @@
 import os
-import csv
-import json
 import torch
-import torch.nn as nn 
-import torch.optim as optim 
-import torch.multiprocessing as mp
+import torch.nn as nn
 
-import argparse
 import numpy as np
 from PIL import Image
-from dataclasses import dataclass, field, asdict
-from torchvision.models import resnet50, ResNet50_Weights
-
-from fineTuneResNet import loadResNet50
-from PIL import ImageFilter
-
 from collections import defaultdict
-
-
-'''
-second refactor --> since we trained a new model that has a conv step 
-the output from that layer on ResNet is gonna end up being 8x8 with 1 channel . 
-BCE loss so that 1 channel activity maps directly to the class. 
-
-this algorithm already pads, then picks overlaping 1024x1024 regions. 
-so what we need to do. is use less of those. --> before we only got 1 score - center pixel 
-8x8 means we can pick more pixels from the resulting map to add to the point list
-ie. we build the point list faster --> less 1024x1024 regions needed. 
-
-'''
-
-
-def getImagePaths():
-    img_dir =  os.environ['CHESTXRAY8_BASE_DIR']
-    mass_set = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/Mass_set.csv')
-    paths = []
-    with open(mass_set, mode='r', newline='', encoding='utf-8') as ff:
-        reader = csv.reader(ff)
-        next(reader) # skip the header. 
-        for row in reader:
-            paths.append(os.path.join(img_dir,row[0]))
-    return paths
+from torchvision.models import resnet50, ResNet50_Weights
 
 def get_subimg_inds(img_size=1024, stride=16):
     pad_up = img_size // stride
@@ -64,6 +29,21 @@ def patch_generator(img, patch_size=128, stride=None):
     for i in range(0, H - patch_size + 1, stride):
         for j in range(0, W - patch_size + 1, stride):
             yield img[i:i+patch_size, j:j+patch_size], i, j
+
+def loadResNet50(num_classes):
+    weights = ResNet50_Weights.DEFAULT
+    model = resnet50(weights=weights)
+
+    # replace final FC
+    in_feats = model.fc.in_features
+    model.fc = nn.Linear(in_feats, num_classes)
+
+    # freeze backbone (optional but recommended for sanity check)
+    for name, param in model.named_parameters():
+        if not name.startswith("fc"):
+            param.requires_grad = False
+
+    return model, weights.transforms()
 
 class model_runner():
     def __init__(self):
@@ -143,20 +123,6 @@ class model_runner():
         
         return out
 
-def worker(inds_chunk, padimg):
-    # each worker has its own model  .
-    M00 = model_runner() 
-    
-    all_out = defaultdict(float)
-    for (y0, y1, x0, x1) in inds_chunk:
-        view = padimg[y0:y1, x0:x1, :]
-        out = M00.process_img(view, offset_y=y0, offset_x=x0)
-
-        # accumulate score.     
-        for k_,v_ in out.items():
-            all_out[k_]+=v_
-    return all_out
-
 def make_padded_image(img, padded_shape):
     padimg = np.zeros(padded_shape, dtype=img.dtype)
 
@@ -216,46 +182,6 @@ def to_heatmap(outdir,out, name_ = 'heatmap'):
     out_pil = Image.fromarray(out, mode="L")
     out_pil.save(os.path.join(outdir,f"{name_}.png"))
 
-def heatmap_gen_dist():
-    img_paths = getImagePaths()
-    # print('img paths ', img_paths)
-    img0 = Image.open(img_paths[0]).convert("RGB")
-    img0 = np.array(img0) / 255.0
-    
-    img_size = img0.shape[0]
-    inds, pad_up  = get_subimg_inds(img_size = img_size, stride = 16)
 
-    print('number of large image reps, bbox ',inds.shape)
-    # this one already distributes the chunks pretty well
-    
-    processes = 4
-    chunks = np.array_split(inds, processes)
-    padimg0 = make_padded_image(img0, [img_size + pad_up, img_size + pad_up,3])
-
-    mp.set_start_method("spawn", force=True)
-    with mp.get_context("spawn").Pool(processes) as pool:
-        results = pool.starmap(worker, [(chunks[i], padimg0) for i in range(processes)])
-    
-    accumulated = defaultdict(float)
-    for rr in results:
-        for k_, v_ in rr.items():
-            accumulated[k_] += v_
-
-    print('LEN accum ', len(accumulated))
-    # Convert tuple keys to lists or strings for JSON serialization
-    points_list = [{"yx": list(k), "score": float(v)} for k, v in accumulated.items()]
-    
-    heatmap = mapmaker(padimg0, points_list, patch_size=128)
-    
-    moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/pytorch_resnet_v2')
-    output_dir = os.path.join(moddir, 'outputs') 
-    to_heatmap(output_dir, heatmap, name_ = 'torch_mp_heatmap')
-    overlay_ = overlay_heatmap_simple(img0, heatmap, alpha=0.5)
-    overlay_.save(os.path.join(output_dir, f"torch_mp_heatmap_overlay.png"))
-
-if __name__ =='__main__':
-    heatmap_gen_dist()
-    
-    
     
     
