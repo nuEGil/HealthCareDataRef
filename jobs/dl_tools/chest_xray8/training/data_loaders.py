@@ -46,7 +46,8 @@ AUG_OPS = {
     "rot180": lambda img: img.transpose(Image.ROTATE_180),
     "rot270": lambda img: img.transpose(Image.ROTATE_270),
 }
-AUG_P = np.array([0.5, 0.1, 0.1, 0.1, 0.1, 0.1])
+# 75% chance of normal image, 25% chance of augmentation. .
+AUG_P = np.array([0.75, 0.05, 0.05, 0.05, 0.05, 0.05])
 def random_aug0(img: Image.Image) -> Image.Image:
     aug = np.random.choice(list(AUG_OPS.keys()), p=AUG_P)
     return AUG_OPS[aug](img)
