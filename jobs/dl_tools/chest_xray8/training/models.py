@@ -129,9 +129,9 @@ class BlockStack(nn.Module):
 
 def loadBlockStack(num_classes):
     model = BlockStack(input_shape = [3, 128,128], 
-                       nblocks = 4, n_kerns = 32, 
-                       pool_rate = 2, n_out = num_classes,
-                       last_activation = 'sigmoid')
+                       nblocks = 32, n_kerns = 32, 
+                       pool_rate = 8, n_out = num_classes,
+                       last_activation = None)
     
     # to stay consistent with the other model loads. 
     def transform(x):
