@@ -8,7 +8,7 @@ import torch.optim as optim
 import argparse
 from dataclasses import dataclass, field
 
-from data_loaders import ClassifierLoader
+from data_loaders import ClassifierLoader, BinClassifierLoader
 from models import loadResNet50_unfreeze, loadBlockStack, loadResNet50_add_convhead
 
 def manageArgs():
@@ -79,12 +79,12 @@ class Trainer():
 
         # intanciate the Loader classes
         self.batch_size = batch_size # arg
-        self.train_Loader = ClassifierLoader(self.device, csv_name_train, batch_size=batch_size)
-        self.test_Loader = ClassifierLoader(self.device, csv_name_test, batch_size=batch_size)
+        # self.train_Loader = ClassifierLoader(self.device, csv_name_train, batch_size=batch_size)
+        # self.test_Loader = ClassifierLoader(self.device, csv_name_test, batch_size=batch_size)
+        self.train_Loader = BinClassifierLoader(self.device, csv_name_train, batch_size=batch_size)
+        self.test_Loader = BinClassifierLoader(self.device, csv_name_test, batch_size=batch_size)
 
         # load the model
-        # model, self.preprocess = loadResNet50_unfreeze(n_classes)
-        # model, self.preprocess = loadBlockStack(n_classes)
         model, self.preprocess = loadResNet50_add_convhead(n_classes)
         if hasattr(model,'hyper_params_0'):
             with open(os.path.join(self.odir, "hyper_params.json"), "w") as f:
@@ -100,9 +100,11 @@ class Trainer():
         # optimizer and loss
         self.optimizer = optim.Adam(model.parameters(), lr=learning_rate)
         # self.lossf = nn.CrossEntropyLoss()
-        loss_weights =  torch.tensor([0.2, 1.0, 1.0, 1.0], device=self.device) # background is more prevelant than anything else
-        loss_weights= loss_weights / loss_weights.mean()
-        self.lossf = nn.CrossEntropyLoss(weight=loss_weights)
+        # loss_weights =  torch.tensor([0.2, 1.0, 1.0, 1.0], device=self.device) # background is more prevelant than anything else
+        # loss_weights= loss_weights / loss_weights.mean()
+        # self.lossf = nn.CrossEntropyLoss(weight=loss_weights)
+        self.sigm = nn.Sigmoid()
+        self.lossf = nn.BCELoss()
 
         # log file and tags. 
         self.log_file_ = log_file()
@@ -117,7 +119,9 @@ class Trainer():
             X, Y_true = self.train_Loader.load_samples(id=sub)
             X = self.preprocess(X) # preprocess should happen in the dataloader  
             y_pred = self.model(X)
-            loss = self.lossf(y_pred, Y_true)
+            y_pred = self.sigm(y_pred)
+            
+            loss = self.lossf(y_pred, Y_true.unsqueeze(1))
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -144,7 +148,9 @@ class Trainer():
             X, Y_true = self.test_Loader.load_samples(id=sub)
             X = self.preprocess(X) # preprocess should happen in the dataloader  
             y_pred = self.model(X)
-            loss = self.lossf(y_pred, Y_true)
+            y_pred = self.sigm(y_pred)
+            
+            loss = self.lossf(y_pred, Y_true.unsqueeze(1))
             total_loss += loss.item()
             # no gradient step or anything like that. 
             print(
@@ -176,6 +182,7 @@ class Trainer():
             
             if steps%5 == 0: 
                 self.test_model(steps)
+
 
 if __name__ == '__main__':
     xargs = manageArgs()

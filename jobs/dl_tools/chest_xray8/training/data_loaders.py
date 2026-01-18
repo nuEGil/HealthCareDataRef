@@ -93,3 +93,31 @@ class ClassifierLoader():
     
     def shuffle(self):
         np.random.shuffle(self.paths)
+
+class BinClassifierLoader(ClassifierLoader):
+    def load_samples(self, id=0):
+        xx = torch.zeros((self.batch_size, 3, 128, 128), dtype=torch.float32)
+        yy = torch.zeros((self.batch_size,), dtype=torch.float32)
+
+        for ii in range(self.batch_size):
+            subrow = self.paths[id + ii]
+
+            img = (
+                Image.open(subrow[1])
+                .convert("RGB")
+                .resize(self.target_size, Image.BILINEAR)
+            )
+            img = random_aug0(img)
+            img = np.array(img) / 255.0
+
+            lab = int(subrow[2])   # 0 or 1
+            if lab > 0:
+                lab = 1.0
+            else:
+                lab = 0.0
+
+            xx[ii] = torch.from_numpy(img).permute(2, 0, 1)
+            yy[ii] = lab
+
+        return xx.to(self.device), yy.to(self.device)
+    
