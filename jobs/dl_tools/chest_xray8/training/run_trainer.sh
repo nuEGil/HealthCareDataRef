@@ -8,8 +8,6 @@ python jobs/dl_tools/chest_xray8/training/task.py \
 --batch_size 32 \
 --epochs 100 
 
-
-
 # python jobs/dl_tools/chest_xray8/training/task.py \
 # --model_type BlockStack \
 # --tag mass_v0 \

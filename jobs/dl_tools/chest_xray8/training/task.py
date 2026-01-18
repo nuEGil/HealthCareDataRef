@@ -125,10 +125,8 @@ class Trainer():
                                 model.parameters(),
                                 lr=learning_rate,           # Start moderate, not too high
                                 weight_decay=0.01, # L2 regularization
-                                betas=(0.9, 0.999))
-        #BCE loss needs sigmoid activation -- regular cross entropy takes logits. 
-        self.sigm = nn.Sigmoid()
-        self.lossf = nn.BCELoss()
+                                betas=(0.9, 0.999)) 
+        self.lossf = nn.BCEWithLogitsLoss()
         
         # log file and tags. 
         self.log_file_ = log_file()
@@ -148,7 +146,6 @@ class Trainer():
             X, Y_true = self.train_Loader.load_samples(id=sub)
             X = self.preprocess(X) # preprocess should happen in the dataloader  
             y_pred = self.model(X)
-            y_pred = self.sigm(y_pred)
             loss = self.lossf(y_pred, Y_true.unsqueeze(1)) # unsqueeze step unique to BCEloss
 
             self.optimizer.zero_grad()
@@ -181,7 +178,6 @@ class Trainer():
             X, Y_true = self.test_Loader.load_samples(id=sub)
             X = self.preprocess(X) # preprocess should happen in the dataloader  
             y_pred = self.model(X)
-            y_pred = self.sigm(y_pred)
             
             loss = self.lossf(y_pred, Y_true.unsqueeze(1)) # unsqueeze step unique to bce loss
             total_loss += loss.item()
