@@ -4,7 +4,7 @@ import json
 import torch
 import torch.nn as nn 
 import torch.optim as optim 
-
+from torchinfo import summary
 import argparse
 from dataclasses import dataclass, field
 
@@ -22,7 +22,7 @@ for BCE loss -- ~0.6 is about random. ~0.1 is a decent model. ~0.05 strong, conf
 # this is adictionary for now. use the arjan codes pattern so you only have to register the thing you use
 model_reg = {'ResNet50_unf':loadResNet50_unfreeze,
              'BlockStack':loadBlockStack,
-             'ResNet50_add_c_head':loadResNet50_add_convhead}
+             'ResNet50_add_c_head':loadResNet50_add_convhead,}
 
 def manageArgs():
     parser = argparse.ArgumentParser(description="train a model")
@@ -113,14 +113,19 @@ class Trainer():
                 json.dump(model.hyper_params_0, f, indent=2)
                 
         model = model.to(self.device)
-        model.train()
         # print a copy of the model.
-        print(model)
+        model.train()
+        # print(model)
+        summary(model, input_size=(batch_size, 3, 128, 128))
         self.model = model
         self.epochs = epochs # arg
 
         # optimizer and loss
-        self.optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+        self.optimizer = optim.AdamW(
+                                model.parameters(),
+                                lr=learning_rate,           # Start moderate, not too high
+                                weight_decay=0.01, # L2 regularization
+                                betas=(0.9, 0.999))
         #BCE loss needs sigmoid activation -- regular cross entropy takes logits. 
         self.sigm = nn.Sigmoid()
         self.lossf = nn.BCELoss()
@@ -129,6 +134,11 @@ class Trainer():
         self.log_file_ = log_file()
         
     def train_one_epoch(self, steps):
+        if not self.model.training:
+            # If in eval mode, switch to train mode
+            self.model.train()
+            print("Switched to training mode.")
+
         total_loss = 0
         self.train_Loader.shuffle()
         NN = self.train_Loader.NN
@@ -139,7 +149,6 @@ class Trainer():
             X = self.preprocess(X) # preprocess should happen in the dataloader  
             y_pred = self.model(X)
             y_pred = self.sigm(y_pred)
-            
             loss = self.lossf(y_pred, Y_true.unsqueeze(1)) # unsqueeze step unique to BCEloss
 
             self.optimizer.zero_grad()
@@ -158,6 +167,11 @@ class Trainer():
         self.log_file_.training_loss.append(total_loss/NN)
 
     def test_model(self, steps):
+        if self.model.training:
+            # If in train mode, switch to eval mode
+            self.model.eval()
+            print("Switched to evaluation mode.")
+    
         print('Testing...')
         total_loss = 0
         NN = self.test_Loader.NN
@@ -178,7 +192,8 @@ class Trainer():
                     flush=True
                 )
 
-        print(f"\nEpoch [{steps+1}/{self.epochs}], Test Loss: {total_loss/NN:.4f}")
+        print("\r" + " " * 80 + "\r", end="")  # clear current line
+        print(f"Epoch [{steps+1}/{self.epochs}], Test Loss: {total_loss/NN:.4f}")
         # print(f'steps: {steps}/{N_steps}, training loss: ', loss.item())
         self.log_file_.testing_step.append(steps)
         self.log_file_.testing_loss.append(total_loss/NN)   

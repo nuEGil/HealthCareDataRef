@@ -1,5 +1,20 @@
 import torch.nn as nn
 from torchvision.models import resnet50, ResNet50_Weights
+from torchvision import transforms
+
+def init_weights(m):
+    """Better initialization for training from scratch"""
+    if isinstance(m, nn.Conv2d):
+        nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
+    elif isinstance(m, nn.Linear):
+        nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
+    elif isinstance(m, nn.LayerNorm):
+        nn.init.constant_(m.weight, 1)
+        nn.init.constant_(m.bias, 0)
 
 class Block(nn.Module):
     def __init__(self, 
@@ -132,7 +147,7 @@ def loadBlockStack(num_classes):
                        nblocks = 32, n_kerns = 32, 
                        pool_rate = 8, n_out = num_classes,
                        last_activation = None)
-    
+    model.apply(init_weights)
     # to stay consistent with the other model loads. 
     def transform(x):
         return x
@@ -155,33 +170,37 @@ def loadResNet50(num_classes):
     return model, weights.transforms
 
 class ResNet50WithHead(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, input_size=128):
         super().__init__()
-        # print shows the order of definition here - not the order of execution inforward. 
         weights = ResNet50_Weights.DEFAULT
         base = resnet50(weights=weights)
-        self.transforms = weights.transforms()
-
-        self.layer4 = base.layer4
-
+        
         self.backbone = nn.Sequential(
             base.conv1, base.bn1, base.relu, base.maxpool,
-            base.layer1, base.layer2, base.layer3,
-            self.layer4,
+            base.layer1, base.layer2, base.layer3, base.layer4
         )
-
-        # 2048 → 1 channel
-        self.conv_head = nn.Conv2d(2048, 1, kernel_size=1) # channel is supervised by new labels. 
-
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(1, num_classes)
-
+        
+        # Calculate spatial size: ResNet50 reduces by 32×
+        spatial_size = input_size // 32
+        num_features = spatial_size * spatial_size
+        
+        self.conv_head = nn.Conv2d(2048, 1, kernel_size=1)
+        
+        # Upsample from 4×4 to 8×8 (for 128×128 input)
+        self.upsample = nn.ConvTranspose2d(1, 1, kernel_size=2, stride=2)
+        self.flat = nn.Flatten()
+        # Now we have 8×8 = 64 features instead of 4×4 = 16
+        self.fc = nn.Linear(64, num_classes)
+        self.drop = nn.Dropout(0.5)
+    
     def forward(self, x):
         x = self.backbone(x)
-        x = self.conv_head(x)   # [B, 1, H, W]
-        x = self.avgpool(x)
-        x = x.flatten(1)
-        return self.fc(x)
+        x = self.conv_head(x)      # [B, 1, 4, 4]
+        x = self.upsample(x)       # [B, 1, 8, 8]
+        x = self.flat(x)           # [B, 64]
+        x = self.drop(x)
+        x = self.fc(x)             # [B, num_classes]
+        return x
 
 def loadResNet50_unfreeze(num_classes):
     model = ResNet50WithHead(num_classes)
@@ -203,20 +222,25 @@ def loadResNet50_unfreeze(num_classes):
 
     return model, model.transforms
 
-def loadResNet50_add_convhead(num_classes):
-    model = ResNet50WithHead(num_classes)
-
-    # freeze all
+def loadResNet50_add_convhead(num_classes, input_size=128):
+    model = ResNet50WithHead(num_classes, input_size=input_size)
+    
+    # Freeze all
     for p in model.parameters():
         p.requires_grad = False
-
-    # unfreeze head
+    
+    # Unfreeze head
     for p in model.conv_head.parameters():
         p.requires_grad = True
-
     for p in model.fc.parameters():
         p.requires_grad = True
-
-    return model, model.transforms
-
+    
+    # Transforms for TENSORS (not PIL Images)
+    # Assumes input is already a tensor in [0, 1] range
+    tensor_transforms = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],  # ImageNet mean
+        std=[0.229, 0.224, 0.225]    # ImageNet std
+    )
+    
+    return model, tensor_transforms
 
