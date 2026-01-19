@@ -37,7 +37,7 @@ async def search(req: SearchRequest):
     SELECT wikititle, description, symptoms, keywords, google_term, icdcode
     FROM knowledge_store
     WHERE {likes}
-    LIMIT 1
+    LIMIT 10
     """
 
     params = [f"%{q}%" for q in qwords]
