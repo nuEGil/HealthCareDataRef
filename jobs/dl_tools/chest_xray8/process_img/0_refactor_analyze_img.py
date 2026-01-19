@@ -108,13 +108,10 @@ class model_runner():
                 if len(batch_patches) == batch_size:
                     batch_tensor = torch.stack(batch_patches).to(self.device)
                     model_pred = self.model(batch_tensor)  # [batch_size, num_classes]
-                    probs = sigm(model_pred)
-                    # print('=-------Probs shape ', probs.shape)
-                    scores = probs.cpu().numpy()
-                    
-                    for (y, x), score in zip(batch_coords, scores):
-                        score = score if score > self.thr else 0.0
-                        if score > 0:
+                    scores = sigm(model_pred).cpu().numpy()  # Move to CPU once
+                    for batch_idx, (y, x) in enumerate(batch_coords):
+                        score = scores[batch_idx]  # Single score per patch
+                        if score > self.thr:
                             new_y = int(y + self.c + offset_y)
                             new_x = int(x + self.c + offset_x)
                             out[(new_y, new_x)] += score
@@ -126,14 +123,12 @@ class model_runner():
             # Process remaining patches (last incomplete batch)
             if batch_patches:
                 batch_tensor = torch.stack(batch_patches).to(self.device)
-                model_pred = self.model(batch_tensor)
-                probs = sigm(model_pred)
-                # print('=-------Probs shape ', probs.shape)
-                scores = probs.cpu().numpy()
+                model_pred = self.model(batch_tensor)  # [batch_size, num_classes]
+                scores = sigm(model_pred).cpu().numpy()  # Move to CPU once
                 
-                for (y, x), score in zip(batch_coords, scores):
-                    score = score if score > self.thr else 0.0
-                    if score > 0:
+                for batch_idx, (y, x) in enumerate(batch_coords):
+                    score = scores[batch_idx]  # Single score per patch
+                    if score > self.thr:
                         new_y = int(y + self.c + offset_y)
                         new_x = int(x + self.c + offset_x)
                         out[(new_y, new_x)] += score
@@ -195,7 +190,7 @@ class model_gridRun():
                     spatial_probs = sigm(spatial_pred)[:,0,:,:] # should get [batch,8x8]
                     print('=-------Probs shape ', spatial_probs.shape)
                     
-                    scores = spatial_probs.cpu().numpy()
+                    # scores = spatial_probs.cpu().numpy()
                     # Find all points above threshold
                     high_conf_points = torch.where(spatial_probs > self.thr)
                     # print('high conf points ', high_conf_points.shape , high_conf_points)
