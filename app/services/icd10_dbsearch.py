@@ -30,7 +30,7 @@ async def search(req: SearchRequest):
     keyword = req.text.lower() # make it lower case  
     keywords = keyword.split(' ') # split by space. we can clean other characters later
 
-    if keywords[0] == "code":
+    if keywords[0] == "code:":
         # only use the 1st ICD code following the keyword to search
         sql = f"""
             SELECT code, short_desc, long_desc
@@ -41,7 +41,7 @@ async def search(req: SearchRequest):
         cur.execute(sql, (f"{keywords[1].upper()}%",))
         rows = cur.fetchall()
 
-    elif keywords[0] == "terms":
+    elif keywords[0] == "terms:":
         # also the base case
         likes = " OR ".join(["LOWER(long_desc) LIKE ?"] * len(keywords[1::]))
         sql = f"""
