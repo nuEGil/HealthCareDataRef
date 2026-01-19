@@ -8,7 +8,7 @@ import torch.multiprocessing as mp
 from collections import defaultdict
 
 from PIL import Image
-from jobs.dl_tools.chest_xray8.training.models import loadResNet50_add_convhead
+from jobs.dl_tools.chest_xray8.training.models import loadResNet50_add_convhead, loadResNet50_add_convheadMLP
 
 
 '''
@@ -65,19 +65,19 @@ class model_runner():
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"------ Using device: {self.device} ------")
 
-        moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/ResNet50_add_c_head_mass_v0')
+        moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/ResNet50_add_c_headMLP_mass_v1')
         
         output_dir = os.path.join(moddir, 'outputs') 
         
         self.output_dir = output_dir
 
-        model_path = os.path.join(moddir, 'mod_tag-mass_v0_steps-40.pt')
+        model_path = os.path.join(moddir, 'mod_tag-mass_v1_steps-55.pt')
         
         ckpt = torch.load(model_path, map_location=self.device)
 
         # you need to copy the architecture exactly for this to work. 
         # remember we have the json file for parame setting --> use this when making custom archiectures. 
-        self.model, self.transforms = loadResNet50_add_convhead(num_classes=1) # use model arch from training
+        self.model, self.transforms = loadResNet50_add_convheadMLP(num_classes=1) # use model arch from training
         print(self.model)
         
         self.model.load_state_dict(ckpt['model_state'])
@@ -87,7 +87,7 @@ class model_runner():
         # this should be the same across models. 
         self.patch_size = 128
         self.c = self.patch_size // 2
-        self.thr = 0.95 # set this in the model class init
+        self.thr = 0.8 # set this in the model class init
 
     def process_img(self, img0, offset_x=0, offset_y=0, batch_size=32):
         # now batching images
@@ -317,7 +317,7 @@ def to_heatmap(outdir,out, name_ = 'heatmap'):
     out_pil.save(os.path.join(outdir,f"{name_}.png"))
 
 def heatmap_gen_dist():
-    moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/ResNet50_add_c_head_mass_v0')
+    moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/ResNet50_add_c_headMLP_mass_v1')
     output_dir = os.path.join(moddir, 'outputs')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
