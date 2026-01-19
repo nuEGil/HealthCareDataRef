@@ -6,6 +6,8 @@ import numpy as np
 from PIL import Image
 from collections import defaultdict
 from torchvision.models import resnet50, ResNet50_Weights
+from jobs.dl_tools.chest_xray8.training.models import loadResNet50_add_convheadMLP
+
 
 def get_subimg_inds(img_size=1024, stride=16):
     pad_up = img_size // stride
@@ -30,39 +32,24 @@ def patch_generator(img, patch_size=128, stride=None):
         for j in range(0, W - patch_size + 1, stride):
             yield img[i:i+patch_size, j:j+patch_size], i, j
 
-def loadResNet50(num_classes):
-    weights = ResNet50_Weights.DEFAULT
-    model = resnet50(weights=weights)
-
-    # replace final FC
-    in_feats = model.fc.in_features
-    model.fc = nn.Linear(in_feats, num_classes)
-
-    # freeze backbone (optional but recommended for sanity check)
-    for name, param in model.named_parameters():
-        if not name.startswith("fc"):
-            param.requires_grad = False
-
-    return model, weights.transforms()
-
 class model_runner():
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"------ Using device: {self.device} ------")
 
-        moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/pytorch_resnet_v2')
+        moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/ResNet50_add_c_headMLP_mass_v1')
+        
         output_dir = os.path.join(moddir, 'outputs') 
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        
         self.output_dir = output_dir
 
-        model_path = os.path.join(moddir, 'mod_tag-v2_steps-95.pt')
+        model_path = os.path.join(moddir, 'mod_tag-mass_v1_steps-55.pt')
         
         ckpt = torch.load(model_path, map_location=self.device)
 
         # you need to copy the architecture exactly for this to work. 
         # remember we have the json file for parame setting --> use this when making custom archiectures. 
-        self.model, self.transforms = loadResNet50(num_classes=2) # use model arch from training
+        self.model, self.transforms = loadResNet50_add_convheadMLP(num_classes=1) # use model arch from training
         print(self.model)
         
         self.model.load_state_dict(ckpt['model_state'])
@@ -81,7 +68,7 @@ class model_runner():
         
         batch_patches = []
         batch_coords = []
-        
+        sigm = torch.nn.Sigmoid()
         with torch.no_grad():
             for patch, y, x in gen:
                 patch_ = torch.from_numpy(patch).permute(2,0,1).float()
@@ -93,12 +80,10 @@ class model_runner():
                 if len(batch_patches) == batch_size:
                     batch_tensor = torch.stack(batch_patches).to(self.device)
                     model_pred = self.model(batch_tensor)  # [batch_size, num_classes]
-                    probs = torch.softmax(model_pred, dim=1)
-                    scores = probs[:, 1].cpu().numpy()
-                    
-                    for (y, x), score in zip(batch_coords, scores):
-                        score = score if score > self.thr else 0.0
-                        if score > 0:
+                    scores = sigm(model_pred).cpu().numpy()  # Move to CPU once
+                    for batch_idx, (y, x) in enumerate(batch_coords):
+                        score = scores[batch_idx]  # Single score per patch
+                        if score > self.thr:
                             new_y = int(y + self.c + offset_y)
                             new_x = int(x + self.c + offset_x)
                             out[(new_y, new_x)] += score
@@ -110,13 +95,12 @@ class model_runner():
             # Process remaining patches (last incomplete batch)
             if batch_patches:
                 batch_tensor = torch.stack(batch_patches).to(self.device)
-                model_pred = self.model(batch_tensor)
-                probs = torch.softmax(model_pred, dim=1)
-                scores = probs[:, 1].cpu().numpy()
+                model_pred = self.model(batch_tensor)  # [batch_size, num_classes]
+                scores = sigm(model_pred).cpu().numpy()  # Move to CPU once
                 
-                for (y, x), score in zip(batch_coords, scores):
-                    score = score if score > self.thr else 0.0
-                    if score > 0:
+                for batch_idx, (y, x) in enumerate(batch_coords):
+                    score = scores[batch_idx]  # Single score per patch
+                    if score > self.thr:
                         new_y = int(y + self.c + offset_y)
                         new_x = int(x + self.c + offset_x)
                         out[(new_y, new_x)] += score

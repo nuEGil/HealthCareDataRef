@@ -58,8 +58,7 @@ HealthCareDataRef/
 It's in the run_app.sh but use this to kill threads on ports you know  
 
 	kill $(sudo lsof -t -i :<PORT>)
-
-
+	
 # TODO
 Polish the readme even further to make this super followable. 
 

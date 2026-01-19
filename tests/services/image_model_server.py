@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 # torch
 import torch.multiprocessing as mp
 
-from app.utils.model_serve_tools import get_subimg_inds, make_padded_image, model_runner
+from tests.utils.model_serve_tools import get_subimg_inds, make_padded_image, model_runner
 
 # could inherit from class model_runner. but there's some extra changes i want to make 
 
@@ -90,5 +90,5 @@ def infer(req: dict):
 
 if __name__ == "__main__":
     # things to do before running the application. 
-    uvicorn.run("app.services.image_model_server:app", host="127.0.0.1", port=8002)
+    uvicorn.run("tests.services.image_model_server:app", host="127.0.0.1", port=8002)
     

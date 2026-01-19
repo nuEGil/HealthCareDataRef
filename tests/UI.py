@@ -17,7 +17,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QImage, QPixmap,  QPainter
 from PyQt6.QtCore import Qt, QRectF
 
-from app.utils.model_serve_tools import mapmaker, make_padded_image, get_subimg_inds, overlay_heatmap_simple
+from tests.utils.model_serve_tools import (mapmaker, make_padded_image, get_subimg_inds, 
+                                           overlay_heatmap_simple)
 '''Add a togle for the different cases on search page
 search page should have 
 1. code 
