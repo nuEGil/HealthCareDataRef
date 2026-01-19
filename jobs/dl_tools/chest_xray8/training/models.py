@@ -200,9 +200,51 @@ class ResNet50WithHead(nn.Module):
         x = self.conv_head(x)      # [B, 1, 4, 4]
         upsamp = self.upsample(x)       # [B, 1, 8, 8]
         out = self.flat(upsamp)           # [B, 64]
-        out = self.drop(out)
         out = self.fc(out)             # [B, num_classes]
+        out = self.drop(out)
         
+        if self.deploy_:
+            return out, upsamp
+        else:
+            return out
+
+class ResNet50WithHeadMLP(nn.Module):
+    def __init__(self, num_classes, input_size=128):
+        super().__init__()
+        weights = ResNet50_Weights.DEFAULT
+        base = resnet50(weights=weights)
+        
+        self.backbone = nn.Sequential(
+            base.conv1, base.bn1, base.relu, base.maxpool,
+            base.layer1, base.layer2, base.layer3, base.layer4
+        )
+        
+        # Calculate spatial size: ResNet50 reduces by 32×
+        spatial_size = input_size // 32
+        num_features = spatial_size * spatial_size
+        
+        self.conv_head = nn.Conv2d(2048, 1, kernel_size=1)
+        # Upsample from 4×4 to 8×8 (for 128×128 input)
+        self.upsample = nn.ConvTranspose2d(1, 1, kernel_size=2, stride=2)
+        self.flat = nn.Flatten()
+        # Now we have 8×8 = 64 features instead of 4×4 = 16
+        self.mlp = MLP(neurons_in = 64, dropout_rate = 0.5,
+                                n_out = 64, activation=None)
+        
+        self.fc = nn.Linear(64, num_classes)
+        self.drop = nn.Dropout(0.5)
+
+        self.deploy_ = False
+    
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.conv_head(x)      # [B, 1, 4, 4]
+        upsamp = self.upsample(x)       # [B, 1, 8, 8]
+        out = self.flat(upsamp)           # [B, 64]
+        out = self.mlp(out)
+        out = self.fc(out)             # [B, num_classes]
+        out = self.drop(out)
+
         if self.deploy_:
             return out, upsamp
         else:
@@ -238,6 +280,10 @@ def loadResNet50_add_convhead(num_classes, input_size=128):
     # Unfreeze head
     for p in model.conv_head.parameters():
         p.requires_grad = True
+    
+    for p in model.upsample.parameters():
+        p.requires_grad = True
+        
     for p in model.fc.parameters():
         p.requires_grad = True
     
@@ -250,3 +296,32 @@ def loadResNet50_add_convhead(num_classes, input_size=128):
     
     return model, tensor_transforms
 
+
+def loadResNet50_add_convheadMLP(num_classes, input_size=128):
+    model = ResNet50WithHeadMLP(num_classes, input_size=input_size)
+    
+    # Freeze all
+    for p in model.parameters():
+        p.requires_grad = False
+    
+    # Unfreeze head
+    for p in model.conv_head.parameters():
+        p.requires_grad = True
+    
+    for p in model.upsample.parameters():
+        p.requires_grad = True
+
+    for p in model.mlp.parameters():
+        p.requires_grad = True
+
+    for p in model.fc.parameters():
+        p.requires_grad = True
+    
+    # Transforms for TENSORS (not PIL Images)
+    # Assumes input is already a tensor in [0, 1] range
+    tensor_transforms = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],  # ImageNet mean
+        std=[0.229, 0.224, 0.225]    # ImageNet std
+    )
+    
+    return model, tensor_transforms

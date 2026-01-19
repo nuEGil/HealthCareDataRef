@@ -9,7 +9,7 @@ import argparse
 from dataclasses import dataclass, field
 
 from data_loaders import ClassifierLoader, BinClassifierLoader
-from models import loadResNet50_unfreeze, loadBlockStack, loadResNet50_add_convhead
+from models import loadResNet50_unfreeze, loadBlockStack, loadResNet50_add_convhead, loadResNet50_add_convheadMLP
 
 '''
 add a registry for model ty, losss type, etc. 
@@ -22,7 +22,8 @@ for BCE loss -- ~0.6 is about random. ~0.1 is a decent model. ~0.05 strong, conf
 # this is adictionary for now. use the arjan codes pattern so you only have to register the thing you use
 model_reg = {'ResNet50_unf':loadResNet50_unfreeze,
              'BlockStack':loadBlockStack,
-             'ResNet50_add_c_head':loadResNet50_add_convhead,}
+             'ResNet50_add_c_head':loadResNet50_add_convhead,
+             'ResNet50_add_c_headMLP':loadResNet50_add_convheadMLP}
 
 def manageArgs():
     parser = argparse.ArgumentParser(description="train a model")
