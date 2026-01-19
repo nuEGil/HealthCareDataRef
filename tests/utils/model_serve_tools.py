@@ -8,7 +8,6 @@ from collections import defaultdict
 from torchvision.models import resnet50, ResNet50_Weights
 from jobs.dl_tools.chest_xray8.training.models import loadResNet50_add_convheadMLP
 
-
 def get_subimg_inds(img_size=1024, stride=16):
     pad_up = img_size // stride
     padded_shape = (img_size + pad_up, img_size + pad_up)

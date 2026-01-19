@@ -27,7 +27,7 @@ curl -X POST http://127.0.0.1:8002/infer \
 '''
 
 models = {}
-processes = 4
+processes = 2
 
 # Initialize function for each worker process -- each process has its own memory space. 
 # so these are global to that process
