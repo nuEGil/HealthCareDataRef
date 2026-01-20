@@ -99,12 +99,12 @@ graph TB
     API2 -->|Response| UI
     API3 -->|Highlighted ROIs| UI
 
-    style External fill:#e1f5ff
-    style Ingestion fill:#fff4e1
-    style Databases fill:#f0e1ff
-    style Backend fill:#e1ffe1
-    style Models fill:#ffe1e1
-    style Frontend fill:#ffe1f5
+    style External fill:#e1f5ff,stroke:#333,stroke-width:2px,color:#000
+    style Ingestion fill:#fff4e1,stroke:#333,stroke-width:2px,color:#000
+    style Databases fill:#f0e1ff,stroke:#333,stroke-width:2px,color:#000
+    style Backend fill:#e1ffe1,stroke:#333,stroke-width:2px,color:#000
+    style Models fill:#ffe1e1,stroke:#333,stroke-width:2px,color:#000
+    style Frontend fill:#ffe1f5,stroke:#333,stroke-width:2px,color:#000
 ```
 
 ## Repo map
