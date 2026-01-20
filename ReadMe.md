@@ -28,6 +28,7 @@ block diagram
 
 ```mermaid
 graph TB
+    linkStyle default stroke:#333,stroke-width:2px
     subgraph External["External Data Sources"]
         CDC["CDC ICD-10-CM<br/>FY26 Text Files"]
         WIKI["Wikipedia<br/>(via REST API)"]
