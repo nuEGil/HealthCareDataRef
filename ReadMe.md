@@ -45,8 +45,8 @@ HealthCareDataRef/
 │   │   ├── entrypoint.sh              # Defines execution order for DB jobs
 │   │   └── parse_wikipedia_pages.py   # Extract structured medical entities
 │   │
-│   └── dltools/                      # Deep-learning training workflows
-│       ├── chestxray8/               # ChestXray-8 CV training & analysis
+│   └── dltools/                       # Deep-learning training workflows
+│       ├── chestxray8/                # ChestXray-8 CV training & analysis
 │       │   ├── BaseDataManager.py     # Dataset indexing, splits, metadata I/O
 │       │   ├── network.py             # Model definitions (ResNet, heads)
 │       │   ├── fineTuneResNet.py      # Supervised + transfer-learning training
@@ -188,6 +188,7 @@ ICD-10-CM codes are U.S. government works in the public domain. ICD-10 website c
 
 
 # Data set notes
+While the data is not hosted in this repo, here are some notes from working with the data. 
 ## CDC ICD Codes
 ### ICD-10-CM
 CDC has the ICD codes that update annually. 
@@ -275,14 +276,25 @@ So say you have some amount of data, images, patient notes, doctors notes, etc. 
 
 
 ## MIMIC-IV Demo
-notes on mimic
-
-PhysioNet has an open access data base here for more examples of ICD codes, but it's just the ICD and the corresponding name.. Realistically we would want accompanying notes that led to the diagnosis, but the triage file gives you the cheif complaint. 
-
+Notes on mimic files. 
+1. Diganosis - contains both ICD-9 and ICD-10 codes
+2. edstays - deidentification scrambles the date, but leaves the time. has check in, leave, and demographic info 
+3. medrecon
+4. pyxis -> medication dispenser information. so time that a medication was administered to the patient.
+5. triage
+6. vitalsign - blood pressure, heart rate, oxygenation, ecg rhythms etc. 
 This data set uses ICD-9 codes as a teaching example, but there should be a conversion sheet somewhere to get the ICD10 codes. 
 
 ## NIH Chest X-Ray8
-notes on chest x-ray8
+Contains 14 classifications of chest pathologies. Labels are applied using natural language processing to extract findings and meta data from the imaging study reports. 
+
+BBox_List_2017.csv has bounding boxes for a small subset of the whole data set. The paper recommends the bounding boxes for weakly supervised tasks. There are some challenges in precise localization of findings. 
+
+Data_Entry_2017.csv has tags for "no findings" and the other 13 classes. Full 112k metadataset for the images. 
+
+~86k filenames included in the train_val_list.txt. the rest are in the test_list. 
+
+
 
 # Database search tools
 Find a code .com --> huge knowledge base for this stuff. you can enter decriptions, the ICD code, symptoms
@@ -305,12 +317,35 @@ poa_required_flag
 diagnosis_date
 
 ## findacode.com notes
- findacode.com  has the documentation + the Dorlands illustrated dictionary. subscribers can add their own notes
+findacode.com  has the documentation + the Dorlands illustrated dictionary. subscribers can add their own notes
 
 Find a code also has a test name
 acquired hemolyptic anemia -- ICD-10-CM codes and diagnostic testing/screening initial testing...
 
 ## Google search specials 
+Useful for formatting search terms in google search. 
+
+https://support.google.com/websearch/answer/2466433?hl=en
+
 search only within a site
-	sites: sitename query
-	sites: https://pubchem.ncbi.nlm.nih.gov 
+	site: sitename query
+	sites https://pubchem.ncbi.nlm.nih.gov Ceftazidime
+
+OR -> find results that includes either term
+
+hashtag -> find popular hashtags on social media
+
+() ->  groups multiple search terms to control order of ops
+
+.. -> search within a specific range of numbers  Guitar $100..$200
+
+""  get the exact phrase. 
+
+asterisk -> wild card 
+
+minus sign --> will do word 1 not word too. so like 
+
+	Jaguar -car
+	Jaguar -feline
+
+one gives the cat, the other gives the car. 
