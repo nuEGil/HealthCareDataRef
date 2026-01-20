@@ -281,7 +281,7 @@ Notes on mimic files.
 2. edstays - deidentification scrambles the date, but leaves the time. has check in, leave, and demographic info 
 3. medrecon
 4. pyxis -> medication dispenser information. so time that a medication was administered to the patient.
-5. triage
+5. triage - starts with cheap
 6. vitalsign - blood pressure, heart rate, oxygenation, ecg rhythms etc. 
 This data set uses ICD-9 codes as a teaching example, but there should be a conversion sheet somewhere to get the ICD10 codes. 
 
