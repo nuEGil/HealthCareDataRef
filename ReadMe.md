@@ -1,55 +1,112 @@
 # HealthCareDataRef 
 
-# Copyright information and data attribution
-## Wikipedia page text
-Wikipedia page text is under a creative commons liscence[1-3]. 
-
-Wikipedia REST API requests use this format [4]
-	
-	https://en.wikipedia.org/api/rest_v1/page/html/page name
-
-Wikipedia page titles use this format 
-	
-	https://en.wikipedia.org/wiki/page_name
-
-1. https://en.wikipedia.org/wiki/Wikipedia:Copyrights
-2. https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License
-3. https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_GNU_Free_Documentation_License
-4. https://en.wikipedia.org/wiki/Special:RestSandbox/wmf-restbase
-
-## Physionet Mimic IV Demo
-
-1. https://physionet.org/content/mimic-iv-ed-demo/2.2/ed/#files-panel
-2. https://mimic.mit.edu/
-3. https://physionet.org/content/mimic-iv-ed-demo/view-license/2.2/
-4. Johnson, A., Bulgarelli, L., Pollard, T., Celi, L. A., Horng, S., & Mark, R. (2023). MIMIC-IV-ED Demo (version 2.2). PhysioNet. RRID:SCR_007345. https://doi.org/10.13026/jzz5-vs76
-5. Goldberger, A., Amaral, L., Glass, L., Hausdorff, J., Ivanov, P. C., Mark, R., ... & Stanley, H. E. (2000). PhysioBank, PhysioToolkit, and PhysioNet: Components of a new research resource for complex physiologic signals. Circulation [Online]. 101 (23), pp. e215–e220. RRID:SCR_007345. 
-
-## NIH Chest X-Ray8
-NIH Chest X-Ray .png files are hosted on kaggle under a creative commons liscence. see [1-3] for the links and the paper citation.
-1. https://www.kaggle.com/datasets/nih-chest-xrays/data
-2. https://creativecommons.org/publicdomain/zero/1.0/
-3. Paper: Wang X, Peng Y, Lu L, Lu Z, Bagheri M, Summers RM. ChestX-ray8: Hospital-scale Chest X-ray Database and Benchmarks on Weakly-Supervised Classification and Localization of Common Thorax Diseases. IEEE CVPR 2017, ChestX-ray8_Hospital-Scale_Chest_CVPR_2017_paper.pdf
-
-## CDC ICD10 data 
-https://www.cdc.gov/nchs/icd/icd-10-cm/files.html
-
-
 ## Table of Contents
-- [Copyright information and data attribution](#copyright-information-and-data-attribution)
-- [Planning](#Planning)
-- [TODO](#TODO)
-- [Chest X-ray Database](#chest-x-ray-database)
-- [Medical Coding Systems](#medical-coding-systems)
-- [Database Search Tools](#database-search-tools)
-- [Other Thoughts](#other-thoughts)
+1. [Overview](#Overview)
+4. [Chest X-ray Database](#chest-x-ray-database)
+5. [Medical Coding Systems](#medical-coding-systems)
+6. [Database Search Tools](#database-search-tools)
+7. [Other Thoughts](#other-thoughts)
+10. [Copyright information and data attribution](#copyright-information-and-data-attribution)
+3. [TODO](#TODO)
 
+# Overview
+The health care system uses coded short descriptions of visits, diagnoses, and treatments. Coding minimizes the information stored and makes the text normalized and searchable for large-scale data systems. International Classification of Diseases (ICD) codes standardize the records. In the US, the CDC publishes codes annually. ICD databases are directories of codes, tables, and descriptions, with PDFs, TXT, and XML files. It's a lot to dig through. Parsing the ICD documentation into searchable databases is advantageous for both automated and human-in-the-loop systems.
 
+When someone is admitted to the hospital or a clinic, they have a chief complaint. There's some med recon, triage, and so on. Ultimately the doctor assigns a diagnosis that fits the observations and tests. A report has to be generated that has the diagnosis code, along with the procedure codes. Health insurance companies take the reports and check to see if the patient's policy covers everything. Because of the specificity of some of the codes, my guess is that some of these impact law enforcement and legal proceedings too.
 
-# Planning 
-The health care system uses coded short descriptions of visit, diagnosis, treatment. Coding minimizes the information stored, and makes the text normalized and searchable for large scale data systems. International Classification of Diseases (ICD) codes standardize the records. In the US, the CDC publishes codes anually. ICD databases are directories of codes, tables, descriptions, with pdfs, txt, xml files. It's a lot to dig through. Parsing the ICD documentation into searchable databases is advantageous for both automated and human in the loop systems. When someone is admitted to the hospital or a clinic, they have a cheif complaint. There's some medrecon, triage, and so on. Ultimately the doctor assigns a diagnosis that fits the observations and tests. A report has to be generated that has the diagnosis code, along with the procedure codes. Health insurance companies take the reports and check to see if the patient's policy covers everything. Because of the specificity of some of the codes, my guess is that some of these impact law enforcement, and legal procedings too.  
+This repo is a demo that implements the following tools that could be useful for finding correct ICD codes and extracting information from imaging data:
 
-This repo is just to explore some of the features that might be used in a clinical data information system. 
+1. UI to make requests to API servers. 
+2. ICD code look up.
+3. Ingestion to keep databases up to date.
+4. Knowledge base search.
+5. LLM calls.
+6. Deep learning tools including, data set curation, model training, and a GPU model server.
+
+## Block Diagram of System
+block diagram
+
+```mermaid
+graph TB
+    subgraph External["External Data Sources"]
+        CDC["CDC ICD-10-CM<br/>FY26 Text Files"]
+        WIKI["Wikipedia<br/>(via REST API)"]
+        GOOGLE["Google Custom<br/>Search API"]
+        NIH["NIH Chest X-ray8<br/>Dataset + Metadata"]
+    end
+
+    subgraph Ingestion["Data Ingestion Pipeline"]
+        ICD_INGEST["ICD-10 Ingestion<br/>Parse text files"]
+        SEARCH["Search Orchestrator<br/>Google API: site:wikipedia.org"]
+        WIKI_FETCH["Wikipedia Fetcher<br/>Download HTML pages"]
+        WIKI_PARSE["HTML Parser<br/>Extract paragraphs & symptoms"]
+        
+        XRAY_INGEST["X-ray Data Ingestion<br/>Load 3 spreadsheets"]
+        PATCH_GEN["Patch Generator<br/>Join + Extract ROIs<br/>Oversample findings<br/>Balance classes"]
+        TRAIN["Model Training<br/>Train/Test split"]
+    end
+
+    subgraph Databases["Local Databases (SQL)"]
+        ICD_DB[("ICD-10 Code<br/>Database")]
+        KB_DB[("Knowledge Store<br/>Database<br/>(Wikipedia data)")]
+        XRAY_DB[("X-ray Metadata<br/>Database<br/>(Bounding boxes,<br/>labels, splits)")]
+    end
+
+    subgraph Backend["FastAPI Servers"]
+        API1["ICD Code<br/>Lookup API"]
+        API2["Knowledge Base<br/>Search API"]
+        API3["GPU Model Server<br/>FastAPI + Torch<br/>Multiprocessing"]
+    end
+
+    subgraph Models["Deep Learning"]
+        TRAINED["Trained Model<br/>(ROI Detection)"]
+        LOCAL_IMG["Local Image Files<br/>(localhost access)"]
+    end
+
+    subgraph Frontend["User Interface"]
+        UI["3-Page Web UI<br/>(HTTP Requests)"]
+    end
+
+    %% Data Ingestion Flow
+    CDC --> ICD_INGEST
+    ICD_INGEST --> ICD_DB
+    ICD_INGEST --> SEARCH
+    SEARCH --> GOOGLE
+    GOOGLE --> WIKI_FETCH
+    WIKI_FETCH --> WIKI
+    WIKI --> WIKI_PARSE
+    WIKI_PARSE --> KB_DB
+
+    %% X-ray Pipeline Flow
+    NIH --> XRAY_INGEST
+    XRAY_INGEST --> XRAY_DB
+    XRAY_DB --> PATCH_GEN
+    PATCH_GEN --> TRAIN
+    TRAIN --> TRAINED
+    TRAINED --> API3
+
+    %% Runtime Flow
+    UI -->|HTTP Request| API1
+    UI -->|HTTP Request| API2
+    UI -->|HTTP Request| API3
+    
+    API1 --> ICD_DB
+    API2 --> KB_DB
+    API3 --> LOCAL_IMG
+    LOCAL_IMG --> API3
+    
+    API1 -->|Response| UI
+    API2 -->|Response| UI
+    API3 -->|Highlighted ROIs| UI
+
+    style External fill:#e1f5ff
+    style Ingestion fill:#fff4e1
+    style Databases fill:#f0e1ff
+    style Backend fill:#e1ffe1
+    style Models fill:#ffe1e1
+    style Frontend fill:#ffe1f5
+```
+
 ## Repo map
 ```text
 HealthCareDataRef/
@@ -95,7 +152,44 @@ HealthCareDataRef/
 It's in the run_app.sh but use this to kill threads on ports you know  
 
 	kill $(sudo lsof -t -i :<PORT>)
+
+# Copyright information and data attribution
+## Wikipedia page text
+Wikipedia page text is under a creative commons licence[1-3]. 
+
+Wikipedia REST API requests use this format [4]:
 	
+	https://en.wikipedia.org/api/rest_v1/page/html/page_name
+
+Wikipedia page titles use this format 
+	
+	https://en.wikipedia.org/wiki/page_name
+
+1. https://en.wikipedia.org/wiki/Wikipedia:Copyrights
+2. https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License
+3. https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_GNU_Free_Documentation_License
+4. https://en.wikipedia.org/wiki/Special:RestSandbox/wmf-restbase
+
+## Physionet Mimic-IV Demo
+
+1. https://physionet.org/content/mimic-iv-ed-demo/2.2/ed/#files-panel
+2. https://mimic.mit.edu/
+3. https://physionet.org/content/mimic-iv-ed-demo/view-license/2.2/
+4. Johnson, A., Bulgarelli, L., Pollard, T., Celi, L. A., Horng, S., & Mark, R. (2023). MIMIC-IV-ED Demo (version 2.2). PhysioNet. RRID:SCR_007345. https://doi.org/10.13026/jzz5-vs76
+5. Goldberger, A., Amaral, L., Glass, L., Hausdorff, J., Ivanov, P. C., Mark, R., ... & Stanley, H. E. (2000). PhysioBank, PhysioToolkit, and PhysioNet: Components of a new research resource for complex physiologic signals. Circulation [Online]. 101 (23), pp. e215–e220. RRID:SCR_007345. 
+
+## NIH Chest X-Ray8
+NIH Chest X-Ray .png files are hosted on Kaggle under a Creative Commons license. See [1-3] for the links and the paper citation.
+1. https://www.kaggle.com/datasets/nih-chest-xrays/data
+2. https://creativecommons.org/publicdomain/zero/1.0/
+3. Paper: Wang X, Peng Y, Lu L, Lu Z, Bagheri M, Summers RM. ChestX-ray8: Hospital-scale Chest X-ray Database and Benchmarks on Weakly-Supervised Classification and Localization of Common Thorax Diseases. IEEE CVPR 2017, ChestX-ray8_Hospital-Scale_Chest_CVPR_2017_paper.pdf
+
+## CDC ICD10 data 
+ICD-10-CM codes are U.S. government works in the public domain. ICD-10 website ciste CDC National Center for Health Statistics (NCHS) as a content source.
+
+1. https://www.cdc.gov/nchs/icd/icd-10-cm/files.html
+
+
 # TODO
 Polish the readme even further to make this super followable. 
 
@@ -110,7 +204,7 @@ Polish the readme even further to make this super followable.
 ### jobs/dbsettools
 1. parseMimic.py: reads data from MIMIC IV demo version available on physionet. it's covered in their data use policy. all the records are anonymized and suitable for use in demos like this. 
 2. parseICD10.py: reads ICD10 order text file and populates an sqlite database. 
-3. save_wikipidia_pages.py: check documentation on google custom search engine and search api. This script reads the ICD10 db, then uses the condition names in that database as part of google searches. the google search api yields a json with links from their search engine. it's limited to 100 requests per day on the free tier. The script then uses the wikipedia REST api to save the wikipedia html given the page found in the google search. so this script will save the search result json and the wikipedia page html. -- note, text on wikipedia is under a creative commons liscence. 
+3. save_wikipidia_pages.py: check documentation on google custom search engine and search api. This script reads the ICD10 db, then uses the condition names in that database as part of google searches. the google search api yields a json with links from their search engine. it's limited to 100 requests per day on the free tier. The script then uses the wikipedia REST api to save the wikipedia html given the page found in the google search. so this script will save the search result json and the wikipedia page html. -- note, text on wikipedia is under a creative commons licence. 
 4. parse_wikipedia_pages.py : reads the wikipedia pages with beautiul soup along with the google search terms, and puts everything into a second sql database. Includes: google_term, wikipedia page title, description(first paragraph), symptoms(info under symptoms section if any), keywords (list of keywords generated by TFIDF after ingesting the wikipedia pages)
 5. entrypoint.sh : batch script to show order of running. might improve this later to just run the full pipeline. but need a lot more checks
 
