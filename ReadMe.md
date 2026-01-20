@@ -1,12 +1,49 @@
 # HealthCareDataRef 
-## Table of Contents
 
+# Copyright information and data attribution
+## Wikipedia page text
+Wikipedia page text is under a creative commons liscence[1-3]. 
+
+Wikipedia REST API requests use this format [4]
+	
+	https://en.wikipedia.org/api/rest_v1/page/html/page name
+
+Wikipedia page titles use this format 
+	
+	https://en.wikipedia.org/wiki/page_name
+
+1. https://en.wikipedia.org/wiki/Wikipedia:Copyrights
+2. https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License
+3. https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_GNU_Free_Documentation_License
+4. https://en.wikipedia.org/wiki/Special:RestSandbox/wmf-restbase
+
+## Physionet Mimic IV Demo
+
+1. https://physionet.org/content/mimic-iv-ed-demo/2.2/ed/#files-panel
+2. https://mimic.mit.edu/
+3. https://physionet.org/content/mimic-iv-ed-demo/view-license/2.2/
+4. Johnson, A., Bulgarelli, L., Pollard, T., Celi, L. A., Horng, S., & Mark, R. (2023). MIMIC-IV-ED Demo (version 2.2). PhysioNet. RRID:SCR_007345. https://doi.org/10.13026/jzz5-vs76
+5. Goldberger, A., Amaral, L., Glass, L., Hausdorff, J., Ivanov, P. C., Mark, R., ... & Stanley, H. E. (2000). PhysioBank, PhysioToolkit, and PhysioNet: Components of a new research resource for complex physiologic signals. Circulation [Online]. 101 (23), pp. e215–e220. RRID:SCR_007345. 
+
+## NIH Chest X-Ray8
+NIH Chest X-Ray .png files are hosted on kaggle under a creative commons liscence. see [1-3] for the links and the paper citation.
+1. https://www.kaggle.com/datasets/nih-chest-xrays/data
+2. https://creativecommons.org/publicdomain/zero/1.0/
+3. Paper: Wang X, Peng Y, Lu L, Lu Z, Bagheri M, Summers RM. ChestX-ray8: Hospital-scale Chest X-ray Database and Benchmarks on Weakly-Supervised Classification and Localization of Common Thorax Diseases. IEEE CVPR 2017, ChestX-ray8_Hospital-Scale_Chest_CVPR_2017_paper.pdf
+
+## CDC ICD10 data 
+https://www.cdc.gov/nchs/icd/icd-10-cm/files.html
+
+
+## Table of Contents
+- [Copyright information and data attribution](#copyright-information-and-data-attribution)
 - [Planning](#Planning)
 - [TODO](#TODO)
 - [Chest X-ray Database](#chest-x-ray-database)
 - [Medical Coding Systems](#medical-coding-systems)
 - [Database Search Tools](#database-search-tools)
 - [Other Thoughts](#other-thoughts)
+
 
 
 # Planning 
@@ -104,18 +141,6 @@ Note -> Data Entry will have labels for every image in the set as far as I can t
 2. knowledge_store_search.py: Search using any keyword. Searches the Keywords gnerated with TFIDF during the wikipedia page parsing. 
 
 3. image_model_server.py : assumes server has a copy of the image the user has. so path request in a real situation would take the cloud platform path to the file and return the points list. 
-
-
-
-# Chest X-Ray Database 
-https://www.kaggle.com/datasets/nih-chest-xrays/data
-
-Look into the ICD codes for the Heart. Currently things like cardiomegaly dont come up under 3 digit codes. 
-they can be found on page one though when doing terms: caridomegally
-
-Liscence per kaggle : CC0 Public Domain -- another creative commons liscence
-
-Paper: Wang X, Peng Y, Lu L, Lu Z, Bagheri M, Summers RM. ChestX-ray8: Hospital-scale Chest X-ray Database and Benchmarks on Weakly-Supervised Classification and Localization of Common Thorax Diseases. IEEE CVPR 2017, ChestX-ray8_Hospital-Scale_Chest_CVPR_2017_paper.pdf
 
 
 # Coding systems

@@ -52,21 +52,18 @@ async def search(req: SearchRequest):
         html += f"""
             <div class="wiki-entry">
                 <h3 class="wiki-title">{wikititle}</h3>
-                <p><b>Description:</b><br/>
-                    {desc}
+                
+                <p><i>Disclaimer:</i><br/>
+                database built with google search api + wikipedia rest api. visit the wikipedia page in the title for the full information.<br/>
+                
+                page: https://en.wikipedia.org/wiki/{'_'.join(wikititle.split(' '))}
                 </p>
 
-                <p><b>Symptoms:</b><br/>
-                    {symptoms}
-                </p>
-                
                 <p><b>ICD Code Prefix:</b><br/>
                     {icdcode}
-                    
                 </p>
 
-                <p><i>Enter {icdcode} on search page for full code </i><br/>
-                    
+                <p><i>Enter code: {icdcode} on search page for full code </i><br/>
                     
                 </p>
                 
@@ -74,14 +71,18 @@ async def search(req: SearchRequest):
                     {kwords}
                 </p>
 
+                <p><b>Description:</b><br/>
+                    {desc}
+                </p>
+                
+                <p><b>Symptoms:</b><br/>
+                    {symptoms}
+                </p>
+                
                 <p><b> ICD term used to search Google:</b><br/>
                     {gterm}
                 </p>
-
-
-                <p><i>Disclaimer:</i><br/>
-                database built with google search api + wikipedia rest api. visit the wikipedia page in the title for the full information. 
-                </p>
+                
             </div>
             """
 
