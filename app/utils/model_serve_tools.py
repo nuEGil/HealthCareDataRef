@@ -49,7 +49,7 @@ class model_runner():
         # you need to copy the architecture exactly for this to work. 
         # remember we have the json file for parame setting --> use this when making custom archiectures. 
         self.model, self.transforms = loadResNet50_add_convheadMLP(num_classes=1) # use model arch from training
-        print(self.model)
+        # print(self.model)
         
         self.model.load_state_dict(ckpt['model_state'])
         self.model.to(self.device)
