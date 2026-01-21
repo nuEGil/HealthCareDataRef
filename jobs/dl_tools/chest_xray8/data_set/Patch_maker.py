@@ -11,40 +11,6 @@ rewrite this with ... well it's file i/o bound, likely threading..
 propper way to do this is to do it with threading. but sprint... bash s
 '''
 
-def draw_bounding_boxes():
-    mass_patch = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], 'user_meta_data/Mass_set.csv')
-    box = []
-    j = 0
-    with open(mass_patch, "r", encoding='utf-8') as ff:
-        reader = csv.reader(ff)
-        next(reader) # skip the header. 
-        for row in reader:
-            # box.append(row)
-            img_name = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], row[0])
-            img = (
-                    Image.open(img_name)
-                    .convert("RGB")
-                )
-
-
-            bbox = list(map(float, row[2:6]))
-            bbox = list(map(int, bbox))
-            x,y,w,h = bbox
-            draw = ImageDraw.Draw(img)
-            # bbox coords
-            x, y, w, h = bbox
-            draw.rectangle(
-                [x, y, x + w, y + h],
-                outline="green",
-                width=3
-                    )
-            
-            outpath = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'],f'user_meta_data/patch_sets/patch_{j}.png')
-            img.save(outpath)
-            j+=1
-            if j>25:
-                break
-
 def read_a_few(tag = 0):
     np.random.seed(42)
 
