@@ -63,7 +63,6 @@ HealthCareDataRef/
 │       └── chemistry_models/          # (Planned) Molecular / structure learning
 │
 ├── models/                           # Trained model artifacts (local / cached)
-├── config/                           # Environment & runtime configuration
 ├── tests/                            # Unit & integration tests
 ├── requirements_torch.txt            # pip install requirements for the enviornment
 └── README.md
