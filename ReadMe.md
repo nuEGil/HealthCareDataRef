@@ -7,6 +7,9 @@ Click on any section of the table of contents to jump to that section.
 4. [Copyright information and data attribution](#copyright-information-and-data-attribution)
 5. [Data set notes](#data-set-notes)
 6. [Database Search Tools](#database-search-tools)
+7. [Back of envelope cost breakdown on LLM API calls](#back-of-envelope-cost-breakdown-on-llm-api-calls)
+8. [Quick math on running an LLM on GPU VM](#quick-math-on-running-an-llm-on-gpu-vm)
+
 
 # Overview
 The health care system uses coded short descriptions of visits, diagnoses, and treatments. Coding minimizes the information stored and makes the text normalized and searchable for large-scale data systems. International Classification of Diseases (ICD) codes standardize the records. In the US, the CDC publishes codes annually. ICD databases are directories of codes, tables, and descriptions, with PDFs, TXT, and XML files. It's a lot to dig through. Parsing the ICD documentation into searchable databases is advantageous for both automated and human-in-the-loop systems.
@@ -349,3 +352,39 @@ minus sign --> will do word 1 not word too. so like
 	Jaguar -feline
 
 one gives the cat, the other gives the car. 
+
+# Back of envelope cost breakdown on LLM API calls
+Fronteir AI labs offer APIs for using their models. In this case, system design and prompt design together determine annual spend. APIs are priced by the million tokens used. These rates are typically between $1.75 - $4.00 per million tokens [1][2]. That range is large because Gemini Pro preview has a clause that the base rate is $2.00 per million tokens for prompts under 200k tokens, and $4.00 for prompts over 200k tokens. Both the input and output token counts are included in the token usage. That should heavily impact design of features that use longer contexts, i.e more tokens per query. These include
+•	Document summary and analysis
+•	Code generation, 
+•	Agentic Tools, 
+•	Chain of thought tools
+•	Other “thinking features”
+
+OpenAI’s website [3] lists a context window size of 400k tokens, and a max output of 128k tokens. But there is active research in AI safety when using longer contexts [4][5]. Recursive llm paper from MIT is applicable here [6]. Some implications for the mental health and AI safety space here but it's beyond the scope of this repo. 
+
+For reference, Codebases can be millions of tokens long. (The Wiki Source Edition from 1917 of) Crime and Punishment, has 1.7 million characters at 1.2MB -> 425-566k tokens. The ICD code short description is fixed at 60 characters so that’s 15-20 tokens. This JAMA paper says that for the 104 million notes in their EHR set, there was a range between 1- 6 million tokens, with a mean record length of 16k tokens owing to the comprehensive nature of the notes [7]. The authors defined their token as the smallest, most semantically meaningful set of chars -- so syllables; but they call the tokens "words" for readability. They also note that about half the text in EHRs is duplicated. So 8k tokens per EHR on average is a decent expectation. 
+
+Ok but how much is this really? Say you only count the short description (60 chars) and the 7-character ICD10 code; that’d be about 67 characters. Depending on token length, it’d be about 15-20 tokens per lookup. With 1.3 billion patients annually between hospitals and physician visits [8][9] --> 19.5 billion(e9) and 26 billion(e9) tokens each year.  --> 19.5(e9)*1.75 (e-6) to  26(e9)*1.75 (e-6) --> $34,000 to $45,000 just on ICD code look up. At the 8k token mark per record from the JAMA article we can say 1.3(e9) * 8(e3) * 1.75(e-6) --> 18.2 (e6) – so $18.2 million parsing lean versions of each record, double it if your system uses the LLM to summarize the text from the full record. The actual cost might be much lower, depending on what size of a number of requests your system handles. So like 10% of the assumed queries in this example would only end up being $1.82 million. 
+
+-- Contact sales department from each llm api company for a quote; I'm unaffiliated. 
+
+1. https://openai.com/api/pricing/
+2. https://ai.google.dev/gemini-api/docs/pricing
+3. https://platform.openai.com/docs/models/gpt-5#:~:text=Fine%2Dtuning-,GPT%2D5,Pricing
+4. https://aclanthology.org/2025.acl-long.1530.pdf?utm_source=chatgpt.com
+5. https://www.apolloresearch.ai/blog/more-capable-models-are-better-at-in-context-scheming/?utm_source=chatgpt.com
+6. https://arxiv.org/html/2512.24601v1
+7. https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2796664
+8. https://www.cdc.gov/nchs/fastats/physician-visits.htm
+9. https://odphp.health.gov/healthypeople/objectives-and-data/browse-objectives/hospital-and-emergency-services#:~:text=Every%20year%20in%20the%20United,about%2036%20million%20hospital%20stays.&text=Healthy%20People%202030%20focuses%20on,%2C%20including%20follow%2Dup%20services.
+
+# Quick math on running an LLM on GPU VM
+For systems that use longer prompts it might be cheaper to use a model image from HuggingFace hosted on a cloud virtual machine (VM) with GPUs. This would also be useful for systems to finetune the models, or train embeddings / vision systems from scratch. HuggingFace hosts a OpenAI’s gpt-oss-120b @ 60.8 GiB, and gpt-oss-20b @ 12.8GiB. If the parameters were all floating point numbers they’d be at least twice the size. But, OpenAI wrote this algorithm for parameter quantization that they talk about in the model card [1]. Basically, they’re taking those parameters and packing them down into 4 bits. This means you can push a much smaller model image to your GPU server. 
+
+The 120b parameter model could fit comfortably on the Google Cloud Platform (GCP) NVDA V100 8GPU instance [2]. That gives 128GB of memory to support the model and extra space to handle tokens from concurrent users. Per their website, this is going to run @ $2.48 an hour per GPU so $19.84 an hour for the complete system. Running this 24/7 for a year puts you at 8736 hours of operation. The annual spend for this system would be in the ballpark of $173,322.24. For the 20b model with 12.GiB you could go with the NVIDA P4 4 GPUs to get the 32 GiB of GPU memory @ 60 cents an hour – $2.40 for all the GPUs, and that puts you at about half the cost - $83,865. These prices are just what’s on the GCP website. Now this doesn’t include the amount you would spend on cloud buckets, or services for storing and tracking model versions and setting up model endpoints. Feel free to check AWS, and Azure, and talk to sales reps from each of these companies for an actual quote – I’m not affiliated with any off these companies.
+
+Now that’s just for one node serving your model. If traffic increases, maybe you want to scale up nodes to keep up with traffic, or you could set some rate limiting nodes to queue up requests for staging before they get to the GPU node for processing. For training multiple models in parallel, it’s likely cheaper to containerize the training application and submit training jobs with the cloud provider’s AI platform rather than run jobs directly on a VM with the buckets mounted to it. 
+
+1. https://arxiv.org/pdf/2508.10925
+2. https://cloud.google.com/compute/gpus-pricing
