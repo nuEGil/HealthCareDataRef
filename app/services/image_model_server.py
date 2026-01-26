@@ -68,7 +68,7 @@ def infer(req: dict):
     img0 = np.array(img0) / 255.0
     
     img_size = img0.shape[0]
-    inds, pad_up = get_subimg_inds(img_size=img_size, stride=16)
+    inds, pad_up = get_subimg_inds(img_size=img_size, stride=32)
 
     chunks = np.array_split(inds, processes)
     padimg0 = make_padded_image(img0, [img_size + pad_up, img_size + pad_up, 3])
