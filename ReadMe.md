@@ -10,6 +10,8 @@ Click on any section of the table of contents to jump to that section.
 7. [Back of envelope cost breakdown on LLM API calls](#back-of-envelope-cost-breakdown-on-llm-api-calls)
 8. [Quick math on running an LLM on GPU VM](#quick-math-on-running-an-llm-on-gpu-vm)
 
+# Disclaimer 
+This project is for educational and research purposes only and is not intended for clinical use. I’m not affiliated with or endorsing any companies, products, or services mentioned—if you’re interested, contact their respective teams directly. All datasets and materials shown are used under their stated Creative Commons or public licenses; links and attributions provided under Copyright information and data attribution section
 
 # Overview
 The health care system uses coded short descriptions of visits, diagnoses, and treatments. Coding minimizes the information stored and makes the text normalized and searchable for large-scale data systems. International Classification of Diseases (ICD) codes standardize the records. In the US, the CDC publishes codes annually. ICD databases are directories of codes, tables, and descriptions, with PDFs, TXT, and XML files. It's a lot to dig through. Parsing the ICD documentation into searchable databases is advantageous for both automated and human-in-the-loop systems.
