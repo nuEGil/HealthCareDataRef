@@ -33,14 +33,10 @@ class model_runner():
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"------ Using device: {self.device} ------")
 
-        moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/ResNet50_add_c_headMLP_mass_v1')
-        
+        moddir = os.path.join(os.environ['CHESTXRAY8_BASE_DIR'], f'user_meta_data/ResNet50_add_c_headMLP_mass_v0')
         output_dir = os.path.join(moddir, 'outputs') 
-        
         self.output_dir = output_dir
-
-        model_path = os.path.join(moddir, 'mod_tag-mass_v1_steps-55.pt')
-        
+        model_path = os.path.join(moddir, 'mod_tag-mass_v0_steps-80.pt')
         ckpt = torch.load(model_path, map_location=self.device)
 
         # you need to copy the architecture exactly for this to work. 
