@@ -20,11 +20,8 @@ def get_subimg_inds(img_size=1024, stride=16):
     return np.array(inds), pad_up
 
 def patch_generator(img, patch_size=128, stride=None):
-    # do it this way so you can sample the patches instead of 
-    # saving a list of patches to work on. 
     if stride is None:
         stride = patch_size
-
     H, W = img.shape[:2] 
     
     for i in range(0, H - patch_size + 1, stride):

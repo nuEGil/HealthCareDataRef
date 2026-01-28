@@ -10,10 +10,7 @@ from contextlib import asynccontextmanager
 
 # torch
 import torch.multiprocessing as mp
-
 from app.utils.model_serve_tools import get_subimg_inds, make_padded_image, model_runner
-
-# could inherit from class model_runner. but there's some extra changes i want to make 
 
 '''
 run from the top level with  python -m app.services.image_model_server
@@ -27,7 +24,7 @@ curl -X POST http://127.0.0.1:8002/infer \
 '''
 
 models = {}
-processes = 2
+processes = 4
 
 # Initialize function for each worker process -- each process has its own memory space. 
 # so these are global to that process
@@ -49,14 +46,17 @@ def worker(inds_chunk, padimg):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Creating persistent worker pool...")
-    mp.set_start_method("fork", force=True)
-    # Create pool once with initializer
-    models["pool"] = mp.Pool(processes=processes, initializer=init_worker)
-    print(f"Pool created with {processes} workers")
-    yield
-    print("Shutting down pool...")
-    models["pool"].close()
-    models["pool"].join()
+    # torch mp doc warns against fork before init
+    # https://docs.pytorch.org/docs/stable/notes/multiprocessing.html
+    # but "spawn" results in python warning about a leak here.
+    ctx = mp.get_context("fork") 
+    pool = ctx.Pool(processes=processes, initializer=init_worker)
+    models["pool"] = pool
+    try:
+        yield
+    finally:
+        pool.terminate()
+        pool.join()
 
 app = FastAPI(lifespan=lifespan)
 
