@@ -46,9 +46,9 @@ def worker(inds_chunk, padimg):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Creating persistent worker pool...")
-    # torch mp doc warns against fork before init
+    # torch mp doc warns against fork before init. 
     # https://docs.pytorch.org/docs/stable/notes/multiprocessing.html
-    # but "spawn" results in python warning about a leak here.
+    # but "spawn" results in python warning about a semaphore obj leak.
     ctx = mp.get_context("fork") 
     pool = ctx.Pool(processes=processes, initializer=init_worker)
     models["pool"] = pool
